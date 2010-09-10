@@ -1,0 +1,88 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>spark</title>
+  <link rel='shortcut icon' href='note.ico'>
+  <script type='text/javascript' src='spark.js'></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      font-size: 12pt;
+      margin: 0px 5%;
+    }
+
+    #player {
+      width: 100%;
+    }
+
+    #playing {
+      margin: 10px 0px;
+      padding: 0px;
+      font-size: 14pt;
+    }
+
+    div {
+      margin-top: 15px;
+    }
+
+    #genre-div {
+      float: top;
+      font-size: 13pt;
+    }
+
+    #artist-div, #album-div, #title-div {
+      float: left;
+      margin-right: 30px;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style-type: none;
+      border-left: 1px solid black;
+    }
+
+    li {
+      margin-bottom: 10px;
+      margin-left: 10px;
+      padding: 0;
+    }
+
+    #genre-div li {
+      margin-right: 8px;
+      display: inline;
+    }
+
+    a:hover {
+      color: blue;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+  <div id='player-div'>
+    <p id='playing'>&nbsp;</p>
+    <audio id='player' controls></audio>
+  </div>
+  <div id='genre-div'>
+    <ul id='genre-list'>
+    </ul>
+  </div>
+  <div id='artist-div'>
+    <ul id='artist-list'>
+    </ul>
+  </div>
+  <div id='album-div'>
+    <ul id='album-list'>
+    </ul>
+  </div>
+  <div id='title-div'>
+    <ul id='title-list'>
+    </ul>
+  </div>
+  <script type='text/javascript'>
+    fetch_DB();
+    show();
+  </script>
+</body>
+</html>
