@@ -133,6 +133,7 @@ function play(song) {
     song.artist + ' &nbsp; - &nbsp; ' +
     song.album  + ' &nbsp; - &nbsp; ' +
     song.title;
+  document.title = song.title;
   state.title = song.title;
   show();
 }
