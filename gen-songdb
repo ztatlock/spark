@@ -6,9 +6,14 @@
 IFS=$(echo -en "\n\b")
 
 function main {
+    print_dir .
+}
+
+function print_dir {
+  dir="$1"
   echo "["
   first=true
-  for song in $(find . -name '*.mp3'); do
+  for song in $(find -L $dir -name '*.mp3'); do
     if $first; then
       first=false
     else
@@ -28,7 +33,7 @@ function print_info {
   alb=$(extract_field "$info" 'album:'  'year:')
   yer=$(extract_field "$info" 'year:'   'track:')
   trk=$(extract_field "$info" 'track:'  'genre:')
-  gen=$(extract_field "$info" 'genre:'  '(')
+  gen=$(extract_field_non_greedy "$info" 'genre:'  '(')
 
   tot=$(echo $trk | cut -d '/' -f 2)
   trk=$(echo $trk | cut -d '/' -f 1)
@@ -54,6 +59,13 @@ function extract_field {
                 -e 's/^[ \t]*//' \
                 -e 's/[ \t]*$//'
 }
+
+function extract_field_non_greedy {
+  echo $1 | sed -e "s/.*$2\([^$3]*\)$3.*/\1/" \
+                -e 's/^[ \t]*//' \
+                -e 's/[ \t]*$//'
+}
+
 
 main > .songdb
 
