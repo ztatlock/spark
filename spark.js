@@ -100,6 +100,14 @@ function kbd(e) {
 
 document.onkeydown = kbd;
 
+function suspend_kbd() {
+  document.onkeydown = false;
+}
+
+function enable_kbd() {
+  document.onkeydown = kbd;
+}
+
 /* --------------------------- SONG PLAYERS  --------------------------- */
 
 function play(song) {
@@ -173,6 +181,15 @@ function mk_player(song) {
 
 /* ---------------------------- DB QUERIES  ---------------------------- */
 
+function update_filter() {
+  DB = ORIG_DB; // restore
+  var f = elem('filter').value;
+  if(f != '') {
+    // only keep DB entries satisfying user filter
+    DB = filter(function(s) { return eval(f); }, DB);
+  }
+}
+
 function query(field) {
   var test = match_upto(field)(state);
   var db = filter(test, DB);
@@ -232,6 +249,9 @@ function fetch_DB() {
   req.send('');
   DB = eval(req.responseText);
   DB.sort(song_cmp);
+
+  // save a clean copy so filter can restore
+  ORIG_DB = DB;
 }
 
 function song_cmp(s1, s2) {
