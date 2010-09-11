@@ -228,7 +228,7 @@ function next_song(s) {
 
 function fetch_DB() {
   var req = new XMLHttpRequest();
-  req.open('GET', '.jsdb', false);
+  req.open('GET', '.songdb', false);
   req.send('');
   DB = eval(req.responseText);
   DB.sort(song_cmp);
