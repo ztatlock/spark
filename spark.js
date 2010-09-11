@@ -173,7 +173,9 @@ function mk_player(song) {
   p.preload = 'auto';
   p.autobuffer = true;
   p.controls = true;
-  p.src = escape(song.path);
+  p.src = song.path;
+  if (p.src.indexOf('http') != 0)
+      p.src = escape(p.src);
   p.addEventListener('ended',
                      function() { play(next_song(p.song)); },
                      false);
