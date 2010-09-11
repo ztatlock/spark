@@ -1,71 +1,42 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python
 
-# TODO check that eyeD3 is available
+from __future__ import print_function
+import os
+import eyeD3
 
-# do not split on spaces in file names
-IFS=$(echo -en "\n\b")
+def song_to_js(path):
+    tag = eyeD3.Tag()
+    tag.link(path)
+    return """
+{ path   : "%s"
+, genre  : "%s"
+, artist : "%s"
+, album  : "%s"
+, year   : "%s"
+, track  : "%s"
+, total  : "%s"
+, title  : "%s"
+},
+""" % ( tag.linkedFile.name
+      , tag.getGenre().getName()
+      , tag.getArtist()
+      , tag.getAlbum()
+      , tag.getYear()
+      , tag.getTrackNum()[0]
+      , tag.getTrackNum()[1]
+      , tag.getTitle())
 
-function main {
-    print_dir .
-}
+def print_dir(stream, dir):
+    print('[', file=stream)
+    # not safe in the face of symlink cycles
+    for root, dirs, filenames in os.walk(dir, followlinks=True):
+        files = [os.path.join(root, fn) for fn in filenames]
+        [print(song_to_js(song), file=stream) for song in
+            [song for song in files if song.lower().endswith('mp3')]]
+    print(']', file=stream)
 
-function print_dir {
-  dir="$1"
-  echo "["
-  first=true
-  for song in $(find -L $dir -name '*.mp3'); do
-    if $first; then
-      first=false
-    else
-      echo ","
-    fi
-    print_info "$song"
-  done
-  echo "];"
-}
+def main():
+    print_dir(open('.songdb', 'w'), '.')
 
-function print_info {
-  song="$1"
-  info=$(eyeD3 --no-color "$song")
-
-  tit=$(extract_field "$info" 'title:'  'artist:')
-  art=$(extract_field "$info" 'artist:' 'album:')
-  alb=$(extract_field "$info" 'album:'  'year:')
-  yer=$(extract_field "$info" 'year:'   'track:')
-  trk=$(extract_field "$info" 'track:'  'genre:')
-  gen=$(extract_field_non_greedy "$info" 'genre:'  '(')
-
-  tot=$(echo $trk | cut -d '/' -f 2)
-  trk=$(echo $trk | cut -d '/' -f 1)
-
-  gen=$(echo $gen | tr [:upper:] [:lower:])
-
-  echo "
-{ path   : \"$(echo $song | sed 's:^\./::')\"
-, genre  : \"$gen\"
-, artist : \"$art\"
-, album  : \"$alb\"
-, year   : \"$yer\"
-, track  : \"$trk\"
-, total  : \"$tot\"
-, title  : \"$tit\"
-}
-"
-}
-
-# extract field from $1 between delimiters $2 and $3
-function extract_field {
-  echo $1 | sed -e "s/.*$2\(.*\)$3.*/\1/" \
-                -e 's/^[ \t]*//' \
-                -e 's/[ \t]*$//'
-}
-
-function extract_field_non_greedy {
-  echo $1 | sed -e "s/.*$2\([^$3]*\)$3.*/\1/" \
-                -e 's/^[ \t]*//' \
-                -e 's/[ \t]*$//'
-}
-
-
-main > .songdb
-
+if __name__ == '__main__':
+    main()
