@@ -12,7 +12,7 @@
     }
 
     #player {
-      width: 100%;
+      width: 80%;
     }
 
     #playing {
@@ -26,7 +26,7 @@
     }
 
     #filter {
-      width: 99%;
+      width: 79%;
     }
 
     input {
@@ -69,6 +69,18 @@
       margin-right: 30px;
     }
 
+    #art {
+      width: 128px;
+      height: 128px;
+      float: left;
+      padding-right: 10px;
+      visibility: hidden;
+    }
+
+    #header-div {
+      padding: 15px;
+    }
+
     ul {
       margin: 0;
       padding: 0;
@@ -94,15 +106,18 @@
   </style>
 </head>
 <body>
-  <div id='player-div'>
-    <p id='playing'>&nbsp;</p>
-    <audio id='player' controls></audio>
-  </div>
-  <div id='filter-div'>
-    <input id='filter' type='text'
-      onfocus='suspend_kbd();'
-      onblur='enable_kbd();'
-      onchange='update_filter(); show();' />
+  <div id='header-div'>
+    <div id='player-div'>
+      <img id='art'/>
+      <p id='playing'>&nbsp;</p>
+      <audio id='player' controls></audio>
+    </div>
+    <div id='filter-div'>
+      <input id='filter' type='text'
+        onfocus='suspend_kbd();'
+        onblur='enable_kbd();'
+        onchange='update_filter(); show();' />
+    </div>
   </div>
   <div id='genre-div'>
     <ul id='genre-list'>

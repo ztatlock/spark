@@ -2,6 +2,7 @@ state = { genre  : ''
         , artist : ''
         , album  : ''
         , title  : ''
+        , art    : ''
         , volume : 0.8
         };
 
@@ -133,6 +134,11 @@ function play(song) {
     song.artist + ' &nbsp; - &nbsp; ' +
     song.album  + ' &nbsp; - &nbsp; ' +
     song.title;
+
+  var art = elem('art');
+  art.style.visibility = song.art == '' ? 'hidden' : 'visible';
+  art.src = song.art;
+
   document.title = song.title;
   state.title = song.title;
   show();
@@ -224,6 +230,7 @@ function proj(field) {
       case 'artist' : return s.artist;
       case 'album'  : return s.album;
       case 'title'  : return s.title;
+      case 'art'  : return s.art;
     }
   }
 }

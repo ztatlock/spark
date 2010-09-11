@@ -2,11 +2,17 @@
 
 from __future__ import print_function
 import os
+import glob
 import eyeD3
 
 def song_to_js(path):
     tag = eyeD3.Tag()
     tag.link(path)
+    art_imgs = glob.glob('%s/*.jpg' %
+                         os.path.dirname(path))
+    art_img = ""
+    if len(art_imgs) > 0:
+        art_img = art_imgs[0]
     return """
 { path   : "%s"
 , genre  : "%s"
@@ -16,6 +22,7 @@ def song_to_js(path):
 , track  : "%s"
 , total  : "%s"
 , title  : "%s"
+, art    : "%s"
 },
 """ % ( tag.linkedFile.name
       , tag.getGenre().getName()
@@ -24,7 +31,8 @@ def song_to_js(path):
       , tag.getYear()
       , tag.getTrackNum()[0]
       , tag.getTrackNum()[1]
-      , tag.getTitle())
+      , tag.getTitle()
+      , art_img)
 
 def print_dir(stream, dir):
     print('[', file=stream)
