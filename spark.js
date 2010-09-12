@@ -6,10 +6,11 @@ state = { genre  : ''
         , volume : 0.8
         };
 
-DB     = []; // song database
-PCACHE = []; // player cache
-PMAX   = 4;  // maximum num cache entries
-PMAX   = (PMAX >= 2) ? PMAX : 2; // at least 2 to support prefetch
+DB      = []; // song database
+ORIG_DB = []; // unblemished copy of DB, for filter
+PCACHE  = []; // player cache
+PMAX    = 4;  // maximum num cache entries
+PMAX    = (PMAX >= 2) ? PMAX : 2; // at least 2 to support prefetch
 
 /* ------------------------- DISPLAY HANDLERS -------------------------- */
 
@@ -272,10 +273,19 @@ function fetch_DB() {
   req.open('GET', '.songdb', false);
   req.send('');
   DB = eval(req.responseText);
+  DB = map(intify, DB);
   DB.sort(song_cmp);
 
   // save a clean copy so filter can restore
   ORIG_DB = DB;
+}
+
+// cast apropriate fields from string to int
+function intify(s) {
+  s.year  = parseInt(s.year,  10);
+  s.track = parseInt(s.track, 10);
+  s.total = parseInt(s.total, 10);
+  return s;
 }
 
 function song_cmp(s1, s2) {
