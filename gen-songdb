@@ -1,19 +1,27 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-import os
-import glob
-import eyeD3
+import os, sys, glob, eyeD3
+
+def main():
+  ss = songs('.')
+  js = map(song_to_js, ss)
+  db = '[%s]' % (','.join(js))
+  write(db)  
+
+def songs(dir):
+  res = []
+  # unsafe for symlink cycles
+  for root, dirs, fnms in os.walk(dir, followlinks=True):
+    ss = [os.path.join(root, fnm) for fnm in fnms]
+    ss = [s for s in ss if s.lower().endswith('mp3')]
+    res.extend(ss)
+  return res
 
 def song_to_js(path):
     tag = eyeD3.Tag()
     tag.link(path)
-    art_imgs = glob.glob('%s/*.jpg' %
-                         os.path.dirname(path))
-    art_img = ""
-    if len(art_imgs) > 0:
-        art_img = art_imgs[0]
-    return """
+    art = album_art(path)
+    return '''
 { path   : "%s"
 , genre  : "%s"
 , artist : "%s"
@@ -23,28 +31,32 @@ def song_to_js(path):
 , total  : "%s"
 , title  : "%s"
 , art    : "%s"
-},
-""" % ( tag.linkedFile.name
-      , tag.getGenre().getName()
+}
+''' % ( tag.linkedFile.name
+      , tag.getGenre().getName().lower()
       , tag.getArtist()
       , tag.getAlbum()
       , tag.getYear()
       , tag.getTrackNum()[0]
       , tag.getTrackNum()[1]
       , tag.getTitle()
-      , art_img)
+      , art
+      )
 
-def print_dir(stream, dir):
-    print('[', file=stream)
-    # not safe in the face of symlink cycles
-    for root, dirs, filenames in os.walk(dir, followlinks=True):
-        files = [os.path.join(root, fn) for fn in filenames]
-        [print(song_to_js(song), file=stream) for song in
-            [song for song in files if song.lower().endswith('mp3')]]
-    print(']', file=stream)
+def album_art(path):
+  imgs = glob.glob('%s/*.jpg' % os.path.dirname(path))
+  if len(imgs) > 0:
+    img = imgs[0]
+  else:
+    img = ''
+  return img
 
-def main():
-    print_dir(open('.songdb', 'w'), '.')
+def write(db):
+  try:
+    f = open('.songdb', 'w')
+    f.write(db)
+    f.close()
+  except:
+    sys.error('Error: unable to write .songdb')
 
-if __name__ == '__main__':
-    main()
+main()
