@@ -199,6 +199,13 @@ function update_filter() {
   DB = ORIG_DB; // restore
   var f = elem('filter').value;
   if(f != '') {
+    // prepend queryable fields with param name
+    var fields = ['genre', 'artist', 'album', 'title', 'track', 'year'];
+    for(var i in fields) {
+      var find = new RegExp(fields[i], 'g');
+      var repl = 's.' + fields[i];
+      f = f.replace(find, repl);
+    }
     // only keep DB entries satisfying user filter
     DB = filter(function(s) { return eval(f); }, DB);
   }
