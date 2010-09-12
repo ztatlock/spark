@@ -244,7 +244,7 @@ function proj(field) {
       case 'artist' : return s.artist;
       case 'album'  : return s.album;
       case 'title'  : return s.title;
-      case 'art'  : return s.art;
+      case 'art'    : return s.art;
     }
   }
 }
