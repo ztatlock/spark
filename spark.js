@@ -136,8 +136,13 @@ function play(song) {
     song.title;
 
   var art = elem('art');
-  art.style.visibility = song.art == '' ? 'hidden' : 'visible';
-  art.src = song.art;
+  if(song.art && song.art != '') {
+    art.style.visibility = 'visible';
+    art.src = song.art;
+  } else {
+    art.style.visibility = 'hidden';
+    art.src = '';
+  }
 
   document.title = song.title;
   state.title = song.title;
