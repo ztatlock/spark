@@ -6,79 +6,57 @@
   <script type='text/javascript' src='spark.js'></script>
   <style>
     body {
+      margin: 0;
+      padding: 0;
+      color: #000;
+      background: #fff;
       font-family: sans-serif;
-      font-size: 12pt;
-      margin: 0px 5%;
+      font-size: 14pt;
     }
 
-    #player {
-      width: 80%;
+    #wrap {
+      width: 90%;
+      margin: 0 auto;
+    }
+
+    #top {
+      margin: 20px 0 8px 0;
     }
 
     #playing {
-      margin: 10px 0px;
-      padding: 0px;
-      font-size: 14pt;
+      margin: 0 0 10px 0;
     }
 
-    #filter-div {
-      margin: 10px 0px;
+    #player {
+      margin: 0 0 8px 0;
+      width: 80%;
     }
 
     #filter {
+      margin: 0 0 8px 0;
       width: 79%;
     }
 
-    input {
-      border: 1px solid #ccc;
-      font-size: 14pt;
-      padding: 5px 10px;
-      padding-right: 0px;
-      display: block;
-      
-      -webkit-border-radius:5px;
-      -moz-border-radius:5px;
-      border-radius:5px;
-      
-      -webkit-transition: all 0.5s ease-in-out;
-      -moz-transition: all 0.5s ease-in-out;
-      transition: all 0.5s ease-in-out;
-    }
-
-    input:focus {
-      -webkit-box-shadow: 0 0 25px #ccc;
-      -moz-box-shadow: 0 0 25px #ccc;
-      box-shadow: 0 0 25px #ccc;
-    }
-    
-    input:not(:focus) {
-      opacity: 0.7;
-    }
-    
-    div {
-      margin-top: 15px;
-    }
-
-    #genre-div {
-      float: top;
-      font-size: 13pt;
-    }
-
-    #artist-div, #album-div, #title-div {
-      float: left;
-      margin-right: 30px;
+    #art-div {
+      float: right;
+      width: 18%;
     }
 
     #art {
       width: 128px;
       height: 128px;
       float: left;
-      padding-right: 10px;
-      visibility: hidden;
     }
 
-    #header-div {
-      padding: 15px;
+    #genre-div {
+      float: top;
+      clear: both;
+    }
+
+    #artist-div, #album-div, #title-div {
+      float: left;
+      margin: 20px 25px 0 0;
+      font-size: 12pt;
     }
 
     ul {
@@ -89,8 +67,7 @@
     }
 
     li {
-      margin-bottom: 10px;
-      margin-left: 10px;
+      margin: 0 0 10px 10px;
       padding: 0;
     }
 
@@ -103,21 +80,33 @@
       color: blue;
       cursor: default;
     }
+
+    input {
+      font-size: 14pt;
+      border: 1px solid #ccc;
+      padding: 5px 0 5px 10px;
+      border-radius: 5px;
+    }
+
+    input:not(:focus) {
+      opacity: 0.6;
+    }
   </style>
 </head>
 <body>
-  <div id='header-div'>
+<div id='wrap'>
+  <div id='top'>
+    <div id='art-div'>
+      <img id='art' />
+    </div>
+    <p id='playing'>&nbsp;</p>
     <div id='player-div'>
-      <img id='art'/>
-      <p id='playing'>&nbsp;</p>
       <audio id='player' controls></audio>
     </div>
-    <div id='filter-div'>
-      <input id='filter' type='text'
-        onfocus='suspend_kbd();'
-        onblur='enable_kbd();'
-        onchange='update_filter(); show();' />
-    </div>
+    <input id='filter' type='text'
+      onfocus='suspend_kbd();'
+      onblur='enable_kbd();'
+      onchange='update_filter(); show();' />
   </div>
   <div id='genre-div'>
     <ul id='genre-list'>
@@ -139,5 +128,6 @@
     fetch_DB();
     show();
   </script>
+</div>
 </body>
 </html>
