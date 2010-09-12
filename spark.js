@@ -184,9 +184,11 @@ function mk_player(song) {
   p.preload = 'auto';
   p.autobuffer = true;
   p.controls = true;
-  p.src = song.path;
-  if (p.src.indexOf('http') != 0)
-      p.src = escape(p.src);
+  if(song.path.contains('http')) {
+    p.src = song.path;
+  } else {
+    p.src = escape(song.path);
+  }
   p.addEventListener('ended',
                      function() { play(next_song(p.song)); },
                      false);
@@ -199,13 +201,15 @@ function update_filter() {
   DB = ORIG_DB; // restore
   var f = elem('filter').value;
   if(f != '') {
-    // prepend queryable fields with param name
+    // prepend queryable fields with param name 's'
     var fields = ['genre', 'artist', 'album', 'title', 'track', 'year'];
     for(var i in fields) {
       var find = new RegExp(fields[i], 'g');
       var repl = 's.' + fields[i];
       f = f.replace(find, repl);
     }
+    // prevent songdb modification, assign ==> compare
+    f = f.replace(/([^!=])=([^=])/g, '$1==$2'); 
     // only keep DB entries satisfying user filter
     DB = filter(function(s) { return eval(f); }, DB);
   }
@@ -223,12 +227,10 @@ function match_upto(field) {
     return function(s2) {
       var fields = ['genre', 'artist', 'album', 'title'];
       for(var i in fields) {
-        if(fields[i] == field){
+        if(fields[i] == field)
           break;
-        }
-        if(proj(fields[i])(s1) != proj(fields[i])(s2)) {
+        if(proj(fields[i])(s1) != proj(fields[i])(s2))
           return false;
-        }
       }
       return true;
     }
@@ -369,4 +371,9 @@ function concat(sep, arr) {
   }
   return res;
 }
+
+String.prototype.contains =
+  function(s) {
+    return this.indexOf(s) != -1;
+  }
 
