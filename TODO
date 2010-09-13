@@ -4,3 +4,10 @@
 
 - pop up manual for keybindings
 
+- webfs seems perfect for now
+    If we eventually want more control / portability, consider
+    using Python's builtin webserver libs:
+      http://docs.python.org/library/simplehttpserver.html
+      http://docs.python.org/library/basehttpserver.html
+      http://fragments.turtlemeat.com/pythonwebserver.php
+
