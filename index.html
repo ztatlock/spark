@@ -33,7 +33,7 @@
       width: 80%;
     }
 
-    #canvas-controls {
+    #controls {
       border: 1px solid red;
     }
 
@@ -99,6 +99,9 @@
   </style>
 </head>
 <body>
+<div>
+  <p id='debug'></p>
+</div>
 <div id='wrap'>
   <div id='top'>
     <div id='art-div'>
@@ -106,13 +109,15 @@
     </div>
     <p id='playing'>&nbsp;</p>
     <div id='player-div'>
+      <canvas id='controls' width='700px' height='30px'>
+        Sorry, you need HTML5 canvas. Use Google Chrome.
+      </canvas>
       <audio id='player' controls></audio>
-      <canvas id='canvas-controls' width='700px' height='30px'></canvas>
     </div>
     <input id='filter' type='text'
-      onfocus='suspend_kbd();'
-      onblur='enable_kbd();'
-      onchange='update_filter(); show();' />
+      onfocus='suspend_kbd()'
+      onblur='enable_kbd()'
+      onchange='update_filter(); show()' />
   </div>
   <div id='genre-div'>
     <ul id='genre-list'>
@@ -133,7 +138,8 @@
   <script type='text/javascript'>
     fetch_DB();
     show();
-    draw_player();
+    setInterval('draw_controls()', 250);
+    elem('controls').addEventListener('click', control_click, false);
   </script>
 </div>
 </body>

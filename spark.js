@@ -56,15 +56,91 @@ function select(field, v) {
 
 /* ------------------------- PLAYER CONTROLS  -------------------------- */
 
-function draw_player() {
-  var ctx = elem('canvas-controls').getContext('2d');
+function progress_ratio() {
+  try {
+    var p = elem('player');
+    return p.currentTime / p.duration;
+  } catch(e) {
+    return 0.0;
+  }
+}
 
-  // TODO how to get width and height?
+// TODO remove arbitrary constants
+function draw_controls() {
+  var P = elem('player');
+  var canvas = elem('controls');
+  var ctx = canvas.getContext('2d');
+
+  // TODO get width and height
   var X = 700;
   var Y = 30;
+  var MX = parseInt(X / 2);
+  var MY = parseInt(Y / 2);
 
-  ctx.fillRect(50, Y/2, X-100, 1);
-  ctx.fillRect(X/2, Y/2 - 3, 2, 7);
+  // clear
+  canvas.width = canvas.width;
+
+  // progress line
+  var PROG_L = 30;
+  var PROG_W = 500;
+  ctx.fillRect(PROG_L, MY, PROG_W, 1);
+
+  // progress bead
+  var r = PROG_W * progress_ratio();
+  var x = parseInt(PROG_L + r);
+  ctx.fillRect(x, MY - 5, 3, 11);
+
+  // play / pause
+  if(P.paused) {
+    ctx.beginPath();
+    ctx.moveTo(5,  7);
+    ctx.lineTo(17, MY);
+    ctx.lineTo(5,  Y - 7);
+    ctx.fill();
+  } else {
+    ctx.fillRect(5,  7, 4, Y - 14);
+    ctx.fillRect(13, 7, 4, Y - 14);
+  }
+}
+
+function control_click(e) {
+  var coords = click_coords(e);
+  var x = coords.shift();
+  var y = coords.shift();
+
+  // TODO remove arbitrary constants
+  if(x > 3 && x < 20 && y > 5 && y < 25) {
+    var p = elem('player');
+    if(p.paused) {
+      p.play();
+    } else {
+      p.pause();
+    }
+  }
+
+  // TODO seek
+
+  elem('debug').innerHTML =
+    'x : ' + x + '<br />' +
+    'y : ' + y;
+}
+
+function click_coords(e) {
+  var x;
+  var y;
+  if (e.pageX != undefined && e.pageY != undefined) {
+    x = e.pageX;
+    y = e.pageY;
+  } else {
+    var l = document.body.scrollLeft + document.documentElement.scrollLeft;
+    var t = document.body.scrollTop + document.documentElement.scrollTop;
+    x = e.clientX + l;
+    y = e.clientY + t;
+  }
+  var c = elem('controls');
+  x -= c.offsetLeft;
+  y -= c.offsetTop;
+  return [x, y];
 }
 
 /* ------------------------ KEY PRESS HANDLERS ------------------------- */
