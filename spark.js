@@ -54,6 +54,19 @@ function select(field, v) {
   show();
 }
 
+/* ------------------------- PLAYER CONTROLS  -------------------------- */
+
+function draw_player() {
+  var ctx = elem('canvas-controls').getContext('2d');
+
+  // TODO how to get width and height?
+  var X = 700;
+  var Y = 30;
+
+  ctx.fillRect(50, Y/2, X-100, 1);
+  ctx.fillRect(X/2, Y/2 - 3, 2, 7);
+}
+
 /* ------------------------ KEY PRESS HANDLERS ------------------------- */
 
 function set_vol(x) {

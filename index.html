@@ -33,6 +33,10 @@
       width: 80%;
     }
 
+    #canvas-controls {
+      border: 1px solid red;
+    }
+
     #filter {
       margin: 0 0 8px 0;
       width: 79%;
@@ -103,6 +107,7 @@
     <p id='playing'>&nbsp;</p>
     <div id='player-div'>
       <audio id='player' controls></audio>
+      <canvas id='canvas-controls' width='700px' height='30px'></canvas>
     </div>
     <input id='filter' type='text'
       onfocus='suspend_kbd();'
@@ -128,6 +133,7 @@
   <script type='text/javascript'>
     fetch_DB();
     show();
+    draw_player();
   </script>
 </div>
 </body>
