@@ -12,6 +12,18 @@ PCACHE  = []; // player cache
 PMAX    = 4;  // maximum num cache entries
 PMAX    = (PMAX >= 2) ? PMAX : 2; // at least 2 to support prefetch
 
+function register_listeners() {
+  var f = elem('filter');
+  f.listen('focus',  suspend_kbd);
+  f.listen('blur',   enable_kbd);
+  f.listen('change', update_filter);
+
+  var c = elem('controls');
+  c.listen('click', control_click);
+
+  setInterval('draw_controls()', 250);
+}
+
 /* ------------------------- DISPLAY HANDLERS -------------------------- */
 
 function show() {
@@ -303,6 +315,7 @@ function update_filter() {
     // only keep DB entries satisfying user filter
     DB = filter(function(s) { return eval(f); }, DB);
   }
+  show();
 }
 
 function query(field) {
@@ -395,6 +408,10 @@ function song_cmp(s1, s2) {
 
 function elem(id) {
   return document.getElementById(id);
+}
+
+HTMLElement.prototype.listen = function(e, f) {
+  this.addEventListener(e, f, false);
 }
 
 function list(l) {

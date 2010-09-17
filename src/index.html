@@ -1,0 +1,48 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>spark</title>
+  <link rel='shortcut icon' href='note.ico' />
+  <link rel='stylesheet' type='text/css' href='style.css' />
+  <script type='text/javascript' src='spark.js'></script>
+</head>
+<body>
+
+<div id='top'>
+  <div id='control-div'>
+    <p id='playing'>&nbsp;</p>
+    <canvas id='controls' width='650px' height='30px'></canvas>
+    <div id='player-div'>
+      <audio id='player' controls></audio>
+    </div>
+    <input id='filter' type='text' />
+  </div>
+  <div id='art-div'>
+    <img id='art' />
+  </div>
+</div>
+
+<div id='genre-div'>
+  <ul id='genre-list'></ul>
+</div>
+
+<div id='artist-div'>
+  <ul id='artist-list'></ul>
+</div>
+
+<div id='album-div'>
+  <ul id='album-list'></ul>
+</div>
+
+<div id='title-div'>
+  <ul id='title-list'></ul>
+</div>
+
+<script type='text/javascript'>
+  register_listeners();
+  fetch_DB();
+  show();
+</script>
+
+</body>
+</html>
