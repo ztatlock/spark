@@ -252,10 +252,14 @@ function play(song) {
   p_div.removeChild(p_old);
   p_div.appendChild(p_new);
 
-  elem('playing').innerHTML = 
+  var info =
     song.artist + ' &nbsp; - &nbsp; ' +
     song.album  + ' &nbsp; - &nbsp; ' +
     song.title;
+  if(info.length > 110) {
+    info = song.artist + ' &nbsp; - &nbsp; ' + song.title;
+  }
+  elem('playing').innerHTML = info;
 
   var art = elem('art');
   if(song.art && song.art != '') {
