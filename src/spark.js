@@ -1,10 +1,78 @@
-state = { genre  : ''
-        , artist : ''
-        , album  : ''
-        , title  : ''
-        , art    : ''
-        , volume : 0.8
-        };
+
+function Menu() {
+  this.genre  = '';
+  this.artist = '';
+  this.album  = '';
+  this.title  = '';
+
+  this.display = function() {
+    this.display_field('genre');
+    this.display_field('artist');
+    this.display_field('album');
+    this.display_field('title');
+  }
+
+  this.display_field = function(fld) {
+    var list = elem(fld + '-list');
+    list.innerHTML = '';
+
+    var opts = query(fld);
+    for(var i in opts) {
+      var a = this.selector(fld, opts[i]);
+      var li = create('li');
+      li.appendChild(a);
+      list.appendChild(li);
+    }
+  }
+
+  this.select = function(fld, opt) {
+    switch(fld) {
+      case 'genre':
+        this.genre  = opt;
+        this.artist = '';
+        this.album  = '';
+        this.title  = '';
+        break;
+      case 'artist':
+        this.artist = opt;
+        this.album  = '';
+        this.title  = '';
+        break;
+      case 'album':
+        this.album  = opt;
+        this.title  = '';
+        break;
+      case 'title':
+        this.title  = opt;
+        play(menu_song());
+        break;
+    }
+    this.display();
+  }
+
+  this.selector = function(fld, opt) {
+    var a = create('a');
+
+    // TODO eliminate dependence on global named menu
+    var f = function() { menu.select(fld, opt); };
+    a.listen('click', f);
+
+    if(opt == proj(fld)(this)) {
+      a.setAttribute('style', 'color: green; font-style: italic;');
+    }
+
+    opt = opt.replace(/&/g, "&amp;");
+    opt = opt.replace(/'/g, "&#39;");
+    a.innerHTML = opt;
+    return a;
+  }
+}
+
+
+
+
+
+state = { volume : 0.8 };
 
 DB      = []; // song database
 ORIG_DB = []; // unblemished copy of DB, for filter
@@ -17,48 +85,6 @@ function register_listeners() {
   f.listen('focus',  suspend_kbd);
   f.listen('blur',   enable_kbd);
   f.listen('change', update_filter);
-}
-
-/* ------------------------- DISPLAY HANDLERS -------------------------- */
-
-function show() {
-  show_field('genre');
-  show_field('artist');
-  show_field('album');
-  show_field('title');
-}
-
-function show_field(f) {
-  var fs;
-  fs = query(f);
-  fs = map(selector(f), fs);
-  fs = list(fs);
-  elem(f + '-list').innerHTML = fs;
-}
-
-function select(field, v) {
-  switch(field) {
-    case 'genre':
-      state.genre  = v;
-      state.artist = '';
-      state.album  = '';
-      state.title  = '';
-      break;
-    case 'artist':
-      state.artist = v;
-      state.album  = '';
-      state.title  = '';
-      break;
-    case 'album':
-      state.album  = v;
-      state.title  = '';
-      break;
-    case 'title':
-      state.title  = v;
-      play(state_song());
-      break;
-  }
-  show();
 }
 
 /* ------------------------ KEY PRESS HANDLERS ------------------------- */
@@ -153,8 +179,8 @@ function play(song) {
   }
 
   document.title = song.title;
-  state.title = song.title;
-  show();
+  menu.title = song.title;
+  menu.display();
 }
 
 function fetch_player(song) {
@@ -221,11 +247,11 @@ function update_filter() {
     // only keep DB entries satisfying user filter
     DB = filter(function(s) { return eval(f); }, DB);
   }
-  show();
+  menu.display();
 }
 
 function query(field) {
-  var test = match_upto(field)(state);
+  var test = match_upto(field)(menu);
   var db = filter(test, DB);
   var fs = map(proj(field), db);
   return uniq(fs);
@@ -258,8 +284,8 @@ function proj(field) {
   }
 }
 
-function state_song() {
-  var test = match_upto('')(state);
+function menu_song() {
+  var test = match_upto('')(menu);
   var db = filter(test, DB);
   return db[0];
 }
@@ -316,6 +342,10 @@ function elem(id) {
   return document.getElementById(id);
 }
 
+function create(tag) {
+  return document.createElement(tag);
+}
+
 HTMLElement.prototype.listen = function(e, f) {
   this.addEventListener(e, f, false);
 }
@@ -328,26 +358,6 @@ function list(l) {
   list = map(f, l);
   list = concat('\n', list);
   return list;
-}
-
-function selector(field) {
-  return function(v) {
-    var style = '';
-    if(v == proj(field)(state)) {
-      style = 'style=\'color: green; font-style: italic;\' ';
-    }
-    v = v.replace(/&/g, "&amp;");
-    v = v.replace(/'/g, "&#39;");
-
-    // no sprintf, not worth importing lib
-    var a;
-    a = '<a %s onclick=\'select("%s", "%s");\'>%s</a>';
-    a = a.replace('%s', style);
-    a = a.replace('%s', field);
-    a = a.replace('%s', v);
-    a = a.replace('%s', v);
-    return a;
-  }
 }
 
 /* ------------------------- PROGRAMMING SUPPORT ----------------------- */
