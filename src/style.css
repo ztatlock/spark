@@ -1,0 +1,88 @@
+body {
+  margin: 0;
+  padding: 0;
+  color: #000;
+  background: #fff;
+  font-family: sans-serif;
+  font-size: 12pt;
+}
+
+#wrap {
+  width: 90%;
+  margin: 0 auto;
+}
+
+#top {
+  margin: 20px 0 8px 0;
+}
+
+#playing {
+  margin: 0 0 10px 0;
+  font-size: 14pt;
+}
+
+#player {
+  margin: 0 0 8px 0;
+  width: 80%;
+}
+
+#filter {
+  margin: 0 0 8px 0;
+  width: 79%;
+}
+
+#art-div {
+  float: right;
+  width: 18%;
+}
+
+#art {
+  width: 128px;
+  height: 128px;
+  float: left;
+  visibility: hidden;
+}
+
+#genre-div {
+  float: top;
+  clear: both;
+}
+
+#artist-div, #album-div, #title-div {
+  float: left;
+  margin: 20px 25px 0 0;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+  border-left: 1px solid black;
+}
+
+li {
+  margin: 0 0 10px 10px;
+  padding: 0;
+}
+
+#genre-div li {
+  margin-right: 8px;
+  display: inline;
+}
+
+a:hover {
+  color: blue;
+  cursor: default;
+}
+
+input {
+  font-size: 14pt;
+  border: 1px solid #ccc;
+  padding: 5px 0 5px 10px;
+  border-radius: 5px;
+}
+
+input:not(:focus) {
+  opacity: 0.6;
+}
+
