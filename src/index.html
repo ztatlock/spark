@@ -38,11 +38,11 @@
 </div>
 
 <script type='text/javascript'>
-  register_listeners();
-  fetch_DB();
+  DB = new SongDB('.songdb');
+  MENU = new Menu();
+  MENU.display();
 
-  menu = new Menu();
-  menu.display();
+  register_listeners();
 </script>
 
 </body>

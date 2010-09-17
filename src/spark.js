@@ -51,18 +51,13 @@ function Menu() {
   }
 
   this.selector = function(fld, opt) {
+    var f = function() { MENU.select(fld, opt); };
+
     var a = create('a');
-
-    // TODO eliminate dependence on global named menu
-    var f = function() { menu.select(fld, opt); };
-    a.listen('click', f);
-
     if(opt == proj(fld)(this)) {
       a.setAttribute('style', 'color: green; font-style: italic;');
     }
-
-    opt = opt.replace(/&/g, "&amp;");
-    opt = opt.replace(/'/g, "&#39;");
+    a.listen('click', f);
     a.innerHTML = opt;
     return a;
   }
@@ -72,10 +67,6 @@ function Menu() {
 
 
 
-state = { volume : 0.8 };
-
-DB      = []; // song database
-ORIG_DB = []; // unblemished copy of DB, for filter
 PCACHE  = []; // player cache
 PMAX    = 4;  // maximum num cache entries
 PMAX    = (PMAX >= 2) ? PMAX : 2; // at least 2 to support prefetch
@@ -84,7 +75,7 @@ function register_listeners() {
   var f = elem('filter');
   f.listen('focus',  suspend_kbd);
   f.listen('blur',   enable_kbd);
-  f.listen('change', update_filter);
+  f.listen('change', function() { DB.apply_filter(this.value); });
 }
 
 /* ------------------------ KEY PRESS HANDLERS ------------------------- */
@@ -120,14 +111,14 @@ function kbd(e) {
       if(e.ctrlKey) {
         seek(p.currentTime - 5);
       } else {
-        play(prev_song(p.song));
+        play(DB.prev(p.song));
       }
       break;
     case 39: // right
       if(e.ctrlKey) {
         seek(p.currentTime + 5);
       } else {
-        play(next_song(p.song));
+        play(DB.next(p.song));
       }
       break;
   }
@@ -146,17 +137,19 @@ function enable_kbd() {
 /* --------------------------- SONG PLAYERS  --------------------------- */
 
 function play(song) {
+  var v;
+
   var p_old = elem('player');
   try {
     p_old.pause();
-    state.volume = p_old.volume;
+    v = p_old.volume;
     p_old.currentTime = 0;
   } catch(e) { /* whatever */ }
 
   var p_new = fetch_player(song);
   try {
     p_new.play();
-    p_new.volume = state.volume;
+    p_new.volume = v;
     p_new.currentTime = 0;
   } catch(e) { /* whatever */ }
 
@@ -179,13 +172,13 @@ function play(song) {
   }
 
   document.title = song.title;
-  menu.title = song.title;
-  menu.display();
+  MENU.title = song.title;
+  MENU.display();
 }
 
 function fetch_player(song) {
   pull_in(song);
-  pull_in(next_song(song)); // prefetch
+  pull_in(DB.next(song)); // prefetch
   return lkup_player(song);
 }
 
@@ -224,35 +217,18 @@ function mk_player(song) {
     p.src = escape(song.path);
   }
   p.addEventListener('ended',
-                     function() { play(next_song(p.song)); },
+                     function() { play(DB.next(p.song)); },
                      false);
   return p;
 }
 
 /* ---------------------------- DB QUERIES  ---------------------------- */
 
-function update_filter() {
-  DB = ORIG_DB; // restore
-  var f = elem('filter').value;
-  if(f != '') {
-    // prepend queryable fields with param name 's'
-    var fields = ['genre', 'artist', 'album', 'title', 'track', 'year'];
-    for(var i in fields) {
-      var find = new RegExp(fields[i], 'g');
-      var repl = 's.' + fields[i];
-      f = f.replace(find, repl);
-    }
-    // prevent songdb modification, assign ==> compare
-    f = f.replace(/([^!=])=([^=])/g, '$1==$2'); 
-    // only keep DB entries satisfying user filter
-    DB = filter(function(s) { return eval(f); }, DB);
-  }
-  menu.display();
-}
+
 
 function query(field) {
-  var test = match_upto(field)(menu);
-  var db = filter(test, DB);
+  var test = match_upto(field)(MENU);
+  var db = filter(test, DB.db);
   var fs = map(proj(field), db);
   return uniq(fs);
 }
@@ -272,46 +248,60 @@ function match_upto(field) {
   }
 }
 
-function proj(field) {
-  return function(s) {
-    switch(field) {
-      case 'genre'  : return s.genre;
-      case 'artist' : return s.artist;
-      case 'album'  : return s.album;
-      case 'title'  : return s.title;
-      case 'art'    : return s.art;
-    }
-  }
-}
-
 function menu_song() {
-  var test = match_upto('')(menu);
-  var db = filter(test, DB);
+  var test = match_upto('')(MENU);
+  var db = filter(test, DB.db);
   return db[0];
 }
 
-function prev_song(s) {
-  var i = DB.indexOf(s);
-  return DB[(i-1) % DB.length];
-}
+function SongDB(url) {
+  var db;
+  db = eval(fetch(url));
+  db = map(intify, db);
+  db.sort(song_cmp);
 
-function next_song(s) {
-  var i = DB.indexOf(s);
-  return DB[(i+1) % DB.length];
-}
+  this.db  = db;
+  this._db = db;
 
-/* ----------------------------- MUSIC DB ------------------------------ */
+  this.restore = function() {
+    this.db = this._db;
+  }
 
-function fetch_DB() {
-  var req = new XMLHttpRequest();
-  req.open('GET', '.songdb', false);
-  req.send('');
-  DB = eval(req.responseText);
-  DB = map(intify, DB);
-  DB.sort(song_cmp);
+  this.next = function(s) {
+    var db = this.db;
+    var i = db.indexOf(s);
+    return db[(i+1) % db.length];
+  }
 
-  // save a clean copy so filter can restore
-  ORIG_DB = DB;
+  this.prev = function(s) {
+    var db = this.db;
+    var i = db.indexOf(s);
+    return db[(i-1) % db.length];
+  }
+
+  this.prep_filter = function(f) {
+    // prepend queryable fields with param name 's'
+    var fields = ['genre', 'artist', 'album', 'title', 'track', 'year'];
+    for(var i in fields) {
+      var find = new RegExp(fields[i], 'g');
+      var repl = 's.' + fields[i];
+      f = f.replace(find, repl);
+    }
+
+    // prevent songdb modification, assign ==> compare
+    f = f.replace(/([^!=])=([^=])/g, '$1==$2'); 
+    return f;
+  }
+
+  this.apply_filter = function(f) {
+    this.restore();
+    if(f != '') {
+      f = this.prep_filter(f);
+      var test = function(s) { return eval(f); };
+      this.db = filter(test, this.db);
+    }
+    MENU.display();
+  }
 }
 
 // cast apropriate fields from string to int
@@ -336,7 +326,7 @@ function song_cmp(s1, s2) {
   else                           return s1 - s2;
 }
 
-/* ------------------------- HTML MANIPULATION ------------------------- */
+/* ------------------------- PROGRAMMING SUPPORT ----------------------- */
 
 function elem(id) {
   return document.getElementById(id);
@@ -350,17 +340,28 @@ HTMLElement.prototype.listen = function(e, f) {
   this.addEventListener(e, f, false);
 }
 
-function list(l) {
-  function f(e) {
-    return '<li>' + e + '</li>'
-  }
-  var list;
-  list = map(f, l);
-  list = concat('\n', list);
-  return list;
+String.prototype.contains = function(s) {
+  return this.indexOf(s) != -1;
 }
 
-/* ------------------------- PROGRAMMING SUPPORT ----------------------- */
+function fetch(url) {
+  var req = new XMLHttpRequest();
+  req.open('GET', url, false);
+  req.send('');
+  return req.responseText;
+}
+
+function proj(field) {
+  return function(s) {
+    switch(field) {
+      case 'genre'  : return s.genre;
+      case 'artist' : return s.artist;
+      case 'album'  : return s.album;
+      case 'title'  : return s.title;
+      case 'art'    : return s.art;
+    }
+  }
+}
 
 function map(f, arr) {
   var res = [];
@@ -403,9 +404,4 @@ function concat(sep, arr) {
   }
   return res;
 }
-
-String.prototype.contains =
-  function(s) {
-    return this.indexOf(s) != -1;
-  }
 
