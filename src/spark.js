@@ -1,4 +1,90 @@
 
+function SongDB(url) {
+  var db;
+  db = eval(fetch(url));
+  db = map(intify, db);
+  db.sort(song_cmp);
+
+  this.db  = db;
+  this._db = db;
+
+  this.restore = function() {
+    this.db = this._db;
+  }
+
+  this.next = function(s) {
+    var db = this.db;
+    var i = db.indexOf(s);
+    return db[(i+1) % db.length];
+  }
+
+  this.prev = function(s) {
+    var db = this.db;
+    var i = db.indexOf(s);
+    return db[(i-1) % db.length];
+  }
+
+  this.prep_filter = function(f) {
+    // prepend queryable fields with param name 's'
+    var fields = ['genre', 'artist', 'album', 'title', 'track', 'year'];
+    for(var i in fields) {
+      var find = new RegExp(fields[i], 'g');
+      var repl = 's.' + fields[i];
+      f = f.replace(find, repl);
+    }
+
+    // prevent songdb modification, assign ==> compare
+    f = f.replace(/([^!=])=([^=])/g, '$1==$2'); 
+    return f;
+  }
+
+  this.apply_filter = function(f) {
+    this.restore();
+    if(f != '') {
+      f = this.prep_filter(f);
+      var test = function(s) { return eval(f); };
+      this.db = filter(test, this.db);
+    }
+    MENU.display();
+  }
+
+  this.match_upto = function(fld, s1) {
+    var test = function(s2) {
+      var fields = ['genre', 'artist', 'album', 'title'];
+      for(var i in fields) {
+        if(fields[i] == fld)
+          break;
+        if(proj(fields[i])(s1) != proj(fields[i])(s2))
+          return false;
+      }
+      return true;
+    };
+    return filter(test, this.db); 
+  }
+}
+
+// cast apropriate fields from string to int
+function intify(s) {
+  s.year  = parseInt(s.year,  10);
+  s.track = parseInt(s.track, 10);
+  s.total = parseInt(s.total, 10);
+  return s;
+}
+
+function song_cmp(s1, s2) {
+       if(s1.genre  < s2.genre)  return -1;
+  else if(s1.genre  > s2.genre)  return  1;
+  else if(s1.artist < s2.artist) return -1;
+  else if(s1.artist > s2.artist) return  1;
+  else if(s1.year   < s2.year)   return -1;
+  else if(s1.year   > s2.year)   return  1;
+  else if(s1.album  < s2.album)  return -1;
+  else if(s1.album  > s2.album)  return  1;
+  else if(s1.track  < s2.track)  return -1;
+  else if(s1.track  > s2.track)  return  1;
+  else                           return s1 - s2;
+}
+
 function Menu() {
   this.genre  = '';
   this.artist = '';
@@ -16,7 +102,7 @@ function Menu() {
     var list = elem(fld + '-list');
     list.innerHTML = '';
 
-    var opts = query(fld);
+    var opts = this.field_opts(fld);
     for(var i in opts) {
       var a = this.selector(fld, opts[i]);
       var li = create('li');
@@ -44,22 +130,31 @@ function Menu() {
         break;
       case 'title':
         this.title  = opt;
-        play(menu_song());
+        play(this.song());
         break;
     }
     this.display();
   }
 
   this.selector = function(fld, opt) {
-    var f = function() { MENU.select(fld, opt); };
-
     var a = create('a');
+    var m = this;
+    a.listen('click', function() { m.select(fld, opt); });
     if(opt == proj(fld)(this)) {
       a.setAttribute('style', 'color: green; font-style: italic;');
     }
-    a.listen('click', f);
     a.innerHTML = opt;
     return a;
+  }
+
+  this.field_opts = function(fld) {
+    var db = DB.match_upto(fld, this);
+    var fs = map(proj(fld), db);
+    return uniq(fs);
+  }
+
+  this.song = function() {
+    return DB.match_upto('all', this)[0];
   }
 }
 
@@ -222,110 +317,6 @@ function mk_player(song) {
   return p;
 }
 
-/* ---------------------------- DB QUERIES  ---------------------------- */
-
-
-
-function query(field) {
-  var test = match_upto(field)(MENU);
-  var db = filter(test, DB.db);
-  var fs = map(proj(field), db);
-  return uniq(fs);
-}
-
-function match_upto(field) {
-  return function(s1) {
-    return function(s2) {
-      var fields = ['genre', 'artist', 'album', 'title'];
-      for(var i in fields) {
-        if(fields[i] == field)
-          break;
-        if(proj(fields[i])(s1) != proj(fields[i])(s2))
-          return false;
-      }
-      return true;
-    }
-  }
-}
-
-function menu_song() {
-  var test = match_upto('')(MENU);
-  var db = filter(test, DB.db);
-  return db[0];
-}
-
-function SongDB(url) {
-  var db;
-  db = eval(fetch(url));
-  db = map(intify, db);
-  db.sort(song_cmp);
-
-  this.db  = db;
-  this._db = db;
-
-  this.restore = function() {
-    this.db = this._db;
-  }
-
-  this.next = function(s) {
-    var db = this.db;
-    var i = db.indexOf(s);
-    return db[(i+1) % db.length];
-  }
-
-  this.prev = function(s) {
-    var db = this.db;
-    var i = db.indexOf(s);
-    return db[(i-1) % db.length];
-  }
-
-  this.prep_filter = function(f) {
-    // prepend queryable fields with param name 's'
-    var fields = ['genre', 'artist', 'album', 'title', 'track', 'year'];
-    for(var i in fields) {
-      var find = new RegExp(fields[i], 'g');
-      var repl = 's.' + fields[i];
-      f = f.replace(find, repl);
-    }
-
-    // prevent songdb modification, assign ==> compare
-    f = f.replace(/([^!=])=([^=])/g, '$1==$2'); 
-    return f;
-  }
-
-  this.apply_filter = function(f) {
-    this.restore();
-    if(f != '') {
-      f = this.prep_filter(f);
-      var test = function(s) { return eval(f); };
-      this.db = filter(test, this.db);
-    }
-    MENU.display();
-  }
-}
-
-// cast apropriate fields from string to int
-function intify(s) {
-  s.year  = parseInt(s.year,  10);
-  s.track = parseInt(s.track, 10);
-  s.total = parseInt(s.total, 10);
-  return s;
-}
-
-function song_cmp(s1, s2) {
-       if(s1.genre  < s2.genre)  return -1;
-  else if(s1.genre  > s2.genre)  return  1;
-  else if(s1.artist < s2.artist) return -1;
-  else if(s1.artist > s2.artist) return  1;
-  else if(s1.year   < s2.year)   return -1;
-  else if(s1.year   > s2.year)   return  1;
-  else if(s1.album  < s2.album)  return -1;
-  else if(s1.album  > s2.album)  return  1;
-  else if(s1.track  < s2.track)  return -1;
-  else if(s1.track  > s2.track)  return  1;
-  else                           return s1 - s2;
-}
-
 /* ------------------------- PROGRAMMING SUPPORT ----------------------- */
 
 function elem(id) {
@@ -390,17 +381,6 @@ function uniq(arr) {
     if(res.indexOf(e) == -1) {
       res.push(e);
     }
-  }
-  return res;
-}
-
-function concat(sep, arr) {
-  var res = '';
-  for(var i in arr) {
-    if(i > 0) {
-      res += sep;
-    }
-    res += arr[i];
   }
   return res;
 }
