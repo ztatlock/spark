@@ -1,3 +1,18 @@
+FIELDS = ['genre', 'artist', 'album', 'title', 'track', 'year'];
+
+function match_upto(field) {
+  return function(s1) {
+    return function(s2) {
+      for(var i in FIELDS) {
+        if(FIELDS[i] == field)
+          break;
+        if(proj(FIELDS[i])(s1) != proj(FIELDS[i])(s2))
+          return false;
+      }
+      return true;
+    }
+  }
+}
 
 function SongDB(url) {
   var db;
@@ -12,54 +27,52 @@ function SongDB(url) {
     this.db = this._db;
   }
 
+  this.index = function(s) {
+    return this.db.indexOf(s);
+  }
+
+  this.size = function() {
+    return this.db.length;
+  }
+
+  this.get = function(i) {
+    return this.db[i % this.size()];
+  }
+
   this.next = function(s) {
-    var db = this.db;
-    var i = db.indexOf(s);
-    return db[(i+1) % db.length];
+    var i = this.index(s);
+    return this.get(i + 1);
   }
 
   this.prev = function(s) {
-    var db = this.db;
-    var i = db.indexOf(s);
-    return db[(i-1) % db.length];
+    var i = this.index(s);
+    return this.get(i - 1);
   }
 
-  this.prep_filter = function(f) {
-    // prepend queryable fields with param name 's'
-    var fields = ['genre', 'artist', 'album', 'title', 'track', 'year'];
-    for(var i in fields) {
-      var find = new RegExp(fields[i], 'g');
-      var repl = 's.' + fields[i];
-      f = f.replace(find, repl);
-    }
+  this.prep_filter = function(q) {
+    // prepend fields with param name 's'
+    var aux = function(acc, f) {
+      return acc.replace(new RegExp(f, 'g'), 's.' + f);
+    };
+    q = fold(aux, FIELDS, q);
 
-    // prevent songdb modification, assign ==> compare
-    f = f.replace(/([^!=])=([^=])/g, '$1==$2'); 
-    return f;
+    // prevent db mod, assign ==> compare
+    q = q.replace(/([^!=])=([^=])/g, '$1==$2'); 
+    return q;
   }
 
-  this.apply_filter = function(f) {
+  this.apply_filter = function(q) {
     this.restore();
-    if(f != '') {
-      f = this.prep_filter(f);
-      var test = function(s) { return eval(f); };
+    if(q != '') {
+      q = this.prep_filter(q);
+      var test = function(s) { return eval(q); };
       this.db = filter(test, this.db);
     }
-    MENU.display();
   }
 
-  this.match_upto = function(fld, s1) {
-    var test = function(s2) {
-      var fields = ['genre', 'artist', 'album', 'title'];
-      for(var i in fields) {
-        if(fields[i] == fld)
-          break;
-        if(proj(fields[i])(s1) != proj(fields[i])(s2))
-          return false;
-      }
-      return true;
-    };
-    return filter(test, this.db); 
+  this.match_upto = function(field, s1) {
+    var test = match_upto(field)(s1);
+    return filter(test, this.db);
   }
 }
 
@@ -85,11 +98,12 @@ function song_cmp(s1, s2) {
   else                           return s1 - s2;
 }
 
-function Menu() {
+function Menu(db) {
   this.genre  = '';
   this.artist = '';
   this.album  = '';
   this.title  = '';
+  this.db     = db;
 
   this.display = function() {
     this.display_field('genre');
@@ -98,21 +112,21 @@ function Menu() {
     this.display_field('title');
   }
 
-  this.display_field = function(fld) {
-    var list = elem(fld + '-list');
+  this.display_field = function(f) {
+    var list = elem(f + '-list');
     list.innerHTML = '';
 
-    var opts = this.field_opts(fld);
+    var opts = this.field_opts(f);
     for(var i in opts) {
-      var a = this.selector(fld, opts[i]);
+      var a = this.selector(f, opts[i]);
       var li = create('li');
       li.appendChild(a);
       list.appendChild(li);
     }
   }
 
-  this.select = function(fld, opt) {
-    switch(fld) {
+  this.select = function(field, opt) {
+    switch(field) {
       case 'genre':
         this.genre  = opt;
         this.artist = '';
@@ -136,25 +150,29 @@ function Menu() {
     this.display();
   }
 
-  this.selector = function(fld, opt) {
+  this.selector = function(field, opt) {
     var a = create('a');
     var m = this;
-    a.listen('click', function() { m.select(fld, opt); });
-    if(opt == proj(fld)(this)) {
+    a.listen('click', function() { m.select(field, opt); });
+    if(opt == proj(field)(this)) {
       a.setAttribute('style', 'color: green; font-style: italic;');
     }
     a.innerHTML = opt;
     return a;
   }
 
-  this.field_opts = function(fld) {
-    var db = DB.match_upto(fld, this);
-    var fs = map(proj(fld), db);
+  this.match_upto = function(field) {
+    return this.db.match_upto(field, this);
+  }
+
+  this.field_opts = function(field) {
+    var ms = this.match_upto(field);
+    var fs = map(proj(field), ms);
     return uniq(fs);
   }
 
   this.song = function() {
-    return DB.match_upto('all', this)[0];
+    return this.match_upto('track')[0];
   }
 }
 
@@ -170,7 +188,7 @@ function register_listeners() {
   var f = elem('filter');
   f.listen('focus',  suspend_kbd);
   f.listen('blur',   enable_kbd);
-  f.listen('change', function() { DB.apply_filter(this.value); });
+  f.listen('change', function() { DB.apply_filter(this.value); MENU.display(); });
 }
 
 /* ------------------------ KEY PRESS HANDLERS ------------------------- */
@@ -195,6 +213,7 @@ function kbd(e) {
   switch(e.keyCode) {
     case 32: // space
       p.paused ? p.play() : p.pause();
+      kill_event(e); // do not scroll
       break;
     case 38: // up
       set_vol(p.volume * 1.15);
@@ -222,7 +241,7 @@ function kbd(e) {
 document.onkeydown = kbd;
 
 function suspend_kbd() {
-  document.onkeydown = false;
+  document.onkeydown = null;
 }
 
 function enable_kbd() {
@@ -252,10 +271,9 @@ function play(song) {
   p_div.removeChild(p_old);
   p_div.appendChild(p_new);
 
-  var info =
-    song.artist + ' &nbsp; - &nbsp; ' +
-    song.album  + ' &nbsp; - &nbsp; ' +
-    song.title;
+  var info = song.artist + ' &nbsp; - &nbsp; ' +
+             song.album  + ' &nbsp; - &nbsp; ' +
+             song.title;
   if(info.length > 110) {
     info = song.artist + ' &nbsp; - &nbsp; ' + song.title;
   }
@@ -346,6 +364,15 @@ function fetch(url) {
   return req.responseText;
 }
 
+function kill_event(e) {
+  e.cancelBubble = true;
+  e.returnValue  = false;
+  if(e.stopPropagation) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+}
+
 function proj(field) {
   return function(s) {
     switch(field) {
@@ -358,34 +385,32 @@ function proj(field) {
   }
 }
 
+function fold(f, arr, acc) {
+  for(var i in arr)
+    acc = f(acc, arr[i]);
+  return acc;
+}
+
 function map(f, arr) {
   var res = [];
-  for(var i in arr) {
-    var e = arr[i];
-    res.push(f(e));
-  }
+  for(var i in arr)
+    res.push(f(arr[i]));
   return res;
 }
 
 function filter(test, arr) {
   var res = [];
-  for(var i in arr) {
-    var e = arr[i];
-    if(test(e)) {
-      res.push(e);
-    }
-  }
+  for(var i in arr)
+    if(test(arr[i]))
+      res.push(arr[i]);
   return res;
 }
 
 function uniq(arr) {
   var res = [];
-  for(var i in arr) {
-    var e = arr[i];
-    if(res.indexOf(e) == -1) {
-      res.push(e);
-    }
-  }
+  for(var i in arr)
+    if(res.indexOf(arr[i]) == -1)
+      res.push(arr[i]);
   return res;
 }
 

@@ -40,7 +40,8 @@
 
 <script type='text/javascript'>
   DB = new SongDB('.songdb');
-  MENU = new Menu();
+
+  MENU = new Menu(DB);
   MENU.display();
 
   register_listeners();
