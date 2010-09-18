@@ -1,5 +1,19 @@
 FIELDS = ['genre', 'artist', 'album', 'title', 'track', 'year'];
 
+function proj(field) {
+  return function(s) {
+    switch(field) {
+      case 'genre'  : return s.genre;
+      case 'artist' : return s.artist;
+      case 'album'  : return s.album;
+      case 'title'  : return s.title;
+      case 'track'  : return s.track;
+      case 'year'   : return s.year;
+      case 'art'    : return s.art;
+    }
+  }
+}
+
 function match_upto(field) {
   return function(s1) {
     return function(s2) {
@@ -98,12 +112,18 @@ function song_cmp(s1, s2) {
   else                           return s1 - s2;
 }
 
-function Menu(db) {
+function Menu() {
   this.genre  = '';
   this.artist = '';
   this.album  = '';
   this.title  = '';
-  this.db     = db;
+  this.db     = null;
+  this.player = null;
+
+  this.init = function(db, player) {
+    this.db = db;
+    this.player = player;
+  }
 
   this.display = function() {
     this.display_field('genre');
@@ -144,7 +164,7 @@ function Menu(db) {
         break;
       case 'title':
         this.title  = opt;
-        play(this.song());
+        this.player.play(this.song());
         break;
     }
     this.display();
@@ -152,8 +172,7 @@ function Menu(db) {
 
   this.selector = function(field, opt) {
     var a = create('a');
-    var m = this;
-    a.listen('click', function() { m.select(field, opt); });
+    a.listen('click', mkselector(this, field, opt));
     if(opt == proj(field)(this)) {
       a.setAttribute('style', 'color: green; font-style: italic;');
     }
@@ -176,167 +195,235 @@ function Menu(db) {
   }
 }
 
-
-
-
-
-PCACHE  = []; // player cache
-PMAX    = 4;  // maximum num cache entries
-PMAX    = (PMAX >= 2) ? PMAX : 2; // at least 2 to support prefetch
-
-function register_listeners() {
-  var f = elem('filter');
-  f.listen('focus',  suspend_kbd);
-  f.listen('blur',   enable_kbd);
-  f.listen('change', function() { DB.apply_filter(this.value); MENU.display(); });
-}
-
-/* ------------------------ KEY PRESS HANDLERS ------------------------- */
-
-function set_vol(x) {
-  var p = elem('player');
-  x = (x > 1) ? 1 : x;
-  x = (x < 0.01) ? 0.01 : x;
-  p.volume = x;
-}
-
-function seek(x) {
-  var p = elem('player');
-  x = (x < p.startTime) ? p.startTime : x;
-  x = (x > p.endTime) ? p.endTime : x;
-  p.currentTime = x;
-}
-
-function kbd(e) {
-  var x;
-  var p = elem('player');
-  switch(e.keyCode) {
-    case 32: // space
-      p.paused ? p.play() : p.pause();
-      kill_event(e); // do not scroll
-      break;
-    case 38: // up
-      set_vol(p.volume * 1.15);
-      break;
-    case 40: // down
-      set_vol(p.volume * 0.85);
-      break;
-    case 37: // left
-      if(e.ctrlKey) {
-        seek(p.currentTime - 5);
-      } else {
-        play(DB.prev(p.song));
-      }
-      break;
-    case 39: // right
-      if(e.ctrlKey) {
-        seek(p.currentTime + 5);
-      } else {
-        play(DB.next(p.song));
-      }
-      break;
+// TODO learn why this scoping works
+function mkselector(menu, field, opt) {
+  return function() {
+    menu.select(field, opt);
   }
 }
 
-document.onkeydown = kbd;
+function Player() {
+  this.acache = [];
+  this.ncache = 4;
+  this.song   = null;
+  this.audio  = null;
+  this.db     = null;
+  this.menu   = null;
+
+  this.init = function(db, menu) {
+    this.db = db;
+    this.menu = menu;
+  }
+
+  this.play = function(song) {
+    this.song = song;
+
+    var v = 0.8;
+    try {
+      this.audio.pause();
+      v = this.audio.volume;
+      this.audio.currentTime = 0.0;
+    } catch(e) { /* ignore */ }
+
+    this.audio = this.fetch_audio(song);
+    this.audio.play();
+    this.audio.volume = v;
+
+    var pd = elem('player-div');
+    pd.innerHTML = '';
+    pd.appendChild(this.audio);
+
+    this.display();
+  }
+
+  this.display = function() {
+    var song = this.song;
+    var info = song.artist + ' &nbsp; - &nbsp; ' +
+               song.album  + ' &nbsp; - &nbsp; ' +
+               song.title;
+    if(info.length > 110) {
+      info = song.artist + ' &nbsp; - &nbsp; ' + song.title;
+    }
+    elem('playing').innerHTML = info;
+
+    var art = elem('art');
+    if(song.art && song.art != '') {
+      art.style.visibility = 'visible';
+      art.src = song.art;
+    } else {
+      art.style.visibility = 'hidden';
+      art.src = '';
+    }
+
+    document.title = song.title;
+    this.menu.title = song.title;
+    this.menu.display();
+  }
+
+  this.filter_change = function(q) {
+    this.db.apply_filter(q);
+    this.menu.display(); 
+  }
+
+  this.get_vol = function() {
+    return this.audio.volume;
+  }
+
+  this.set_vol = function(v) {
+    v = (v > 1) ? 1 : v;
+    v = (v < 0.01) ? 0.01 : v;
+    this.audio.volume = v;
+  }
+
+  this.inc_vol = function() {
+    var v = this.get_vol();
+    this.set_vol(v * 1.15);
+  }
+
+  this.dec_vol = function() {
+    var v = this.get_vol();
+    this.set_vol(v * 0.85);
+  }
+
+  this.get_time = function() {
+    return this.audio.currentTime;
+  }
+
+  this.set_time = function(t) {
+    t = (t < p.startTime) ? p.startTime : t;
+    t = (t > p.endTime) ? p.endTime : t;
+    this.audio.currentTime = t;
+  }
+
+  this.inc_time = function() {
+    var t = this.get_time();
+    this.set_time(t + 5);
+  }
+
+  this.dec_time = function() {
+    var t = this.get_time();
+    this.set_time(t - 5);
+  }
+
+  this.toggle = function() {
+    if(this.audio.paused)
+      this.audio.play();
+    else
+      this.audio.pause();
+  }
+
+  this.prev = function() {
+    var s = this.db.prev(this.song);
+    this.play(s);
+  }
+
+  this.next = function() {
+    var s = this.db.next(this.song);
+    this.play(s);
+  }
+
+  this.fetch_audio = function(song) {
+    this.pull_in(song);
+    this.pull_in(this.db.next(song)); // prefetch
+    return this.lkup_audio(song);
+  }
+
+  this.lkup_audio = function(song) {
+    for(var i in this.acache)
+      if(this.acache[i].path == song.path)
+        return this.acache[i].audio;
+    return false;
+  }
+
+  this.pull_in = function(song) {
+    if(!this.lkup_audio(song)) {
+      var a = this.mk_audio(song);
+      var e = {path: song.path, audio: a};
+      this.acache.push(e);
+    }
+
+    // while too big, evict oldest entry
+    while(this.acache.length > this.ncache)
+      this.acache.shift();
+  }
+
+  this.mk_audio = function(song) {
+    var a = new Audio();
+    a.song = song;
+    a.id = 'player';
+    a.preload = 'auto';
+    a.autobuffer = true;
+    a.controls = true;
+    if(song.path.contains('http')) {
+      a.src = song.path;
+    } else {
+      a.src = escape(song.path);
+    }
+    var p = this;
+    a.listen('ended', function() { p.next(); });
+    return a;
+  }
+}
+
+function kbd(player) {
+  return function(e) {
+    switch(e.keyCode) {
+      case 32: // space
+        player.toggle();
+        break;
+      case 38: // up
+        player.inc_vol();
+        break;
+      case 40: // down
+        player.dec_vol();
+        break;
+      case 37: // left
+        if(e.ctrlKey) {
+          player.dec_time();
+        } else {
+          player.prev();
+        }
+        break;
+      case 39: // right
+        if(e.ctrlKey) {
+          player.inc_time();
+        } else {
+          player.next();
+        }
+        break;
+    }
+    // do not propagate
+    kill_event(e);
+  }
+}
+
+// TODO understand javascript closure scoping
+// very tricky on these keyboard events
 
 function suspend_kbd() {
   document.onkeydown = null;
 }
 
-function enable_kbd() {
-  document.onkeydown = kbd;
-}
-
-/* --------------------------- SONG PLAYERS  --------------------------- */
-
-function play(song) {
-  var v;
-
-  var p_old = elem('player');
-  try {
-    p_old.pause();
-    v = p_old.volume;
-    p_old.currentTime = 0;
-  } catch(e) { /* whatever */ }
-
-  var p_new = fetch_player(song);
-  try {
-    p_new.play();
-    p_new.volume = v;
-    p_new.currentTime = 0;
-  } catch(e) { /* whatever */ }
-
-  var p_div = elem('player-div');
-  p_div.removeChild(p_old);
-  p_div.appendChild(p_new);
-
-  var info = song.artist + ' &nbsp; - &nbsp; ' +
-             song.album  + ' &nbsp; - &nbsp; ' +
-             song.title;
-  if(info.length > 110) {
-    info = song.artist + ' &nbsp; - &nbsp; ' + song.title;
-  }
-  elem('playing').innerHTML = info;
-
-  var art = elem('art');
-  if(song.art && song.art != '') {
-    art.style.visibility = 'visible';
-    art.src = song.art;
-  } else {
-    art.style.visibility = 'hidden';
-    art.src = '';
-  }
-
-  document.title = song.title;
-  MENU.title = song.title;
-  MENU.display();
-}
-
-function fetch_player(song) {
-  pull_in(song);
-  pull_in(DB.next(song)); // prefetch
-  return lkup_player(song);
-}
-
-function lkup_player(song) {
-  for(var i in PCACHE) {
-    if(PCACHE[i].path == song.path) {
-      return PCACHE[i].player;
-    }
-  }
-  return false;
-}
-
-function pull_in(song) {
-  if(!lkup_player(song)) {
-    var p = mk_player(song);
-    var e = {path: song.path, player: p};
-    PCACHE.push(e);
-  }
-
-  // while too big, evict oldest entry
-  while(PCACHE.length > PMAX) {
-    PCACHE.shift();
+function enable_kbd(player) {
+  return function() {
+    document.onkeydown = kbd(player);
   }
 }
 
-function mk_player(song) {
-  var p = new Audio();
-  p.song = song;
-  p.id = 'player';
-  p.preload = 'auto';
-  p.autobuffer = true;
-  p.controls = true;
-  if(song.path.contains('http')) {
-    p.src = song.path;
-  } else {
-    p.src = escape(song.path);
+function filter_change(player) {
+  return function() {
+    var f = elem('filter');
+    player.filter_change(f.value);
   }
-  p.addEventListener('ended',
-                     function() { play(DB.next(p.song)); },
-                     false);
-  return p;
+}
+
+function register(player) {
+  var f = elem('filter');
+  f.listen('focus',  suspend_kbd);
+  f.listen('blur',   enable_kbd(player));
+  f.listen('change', filter_change(player));
+
+  enable_kbd(player)();
 }
 
 /* ------------------------- PROGRAMMING SUPPORT ----------------------- */
@@ -370,18 +457,6 @@ function kill_event(e) {
   if(e.stopPropagation) {
     e.stopPropagation();
     e.preventDefault();
-  }
-}
-
-function proj(field) {
-  return function(s) {
-    switch(field) {
-      case 'genre'  : return s.genre;
-      case 'artist' : return s.artist;
-      case 'album'  : return s.album;
-      case 'title'  : return s.title;
-      case 'art'    : return s.art;
-    }
   }
 }
 
