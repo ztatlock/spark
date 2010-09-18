@@ -393,7 +393,14 @@ function kbd(player) {
         break;
     }
     // do not propagate
-    kill_event(e);
+    switch(e.keyCode) {
+      case 32: // space
+      case 38: // up
+      case 40: // down
+      case 37: // left
+      case 39: // right
+        kill_event(e);
+    }
   }
 }
 
