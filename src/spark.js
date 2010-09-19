@@ -261,6 +261,7 @@ function Player() {
   }
 
   this.filter_change = function(q) {
+    q = q.trim();
     this.db.apply_filter(q);
     this.menu.display(); 
   }
@@ -449,6 +450,10 @@ HTMLElement.prototype.listen = function(e, f) {
 
 String.prototype.contains = function(s) {
   return this.indexOf(s) != -1;
+}
+
+String.prototype.trim = function() {
+  return String(this).replace(/^\s+|\s+$/g, '');
 }
 
 function fetch(url) {
