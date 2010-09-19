@@ -7,11 +7,12 @@
   <script type='text/javascript' src='spark.js'></script>
 </head>
 <body>
+<div id='wrap'>
 
 <div id='top'>
   <div id='control-div'>
     <p id='playing'>&nbsp;</p>
-    <canvas id='controls' width='650px' height='30px'></canvas>
+    <canvas id='controls' width='750px' height='30px'></canvas>
     <div id='player-div'>
       <audio id='player' controls></audio>
     </div>
@@ -39,10 +40,16 @@
 </div>
 
 <script type='text/javascript'>
-  register_listeners();
-  fetch_DB();
-  show();
+  d = new SongDB('.songdb');
+  m = new Menu();
+  p = new Player();
+
+  m.init(d, p);
+  p.init(d, m);
+  m.display();
+  register(p);
 </script>
 
+</div>
 </body>
 </html>

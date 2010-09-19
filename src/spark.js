@@ -1,72 +1,35 @@
-state = { genre  : ''
-        , artist : ''
-        , album  : ''
-        , title  : ''
-        , art    : ''
-        , volume : 0.8
-        };
+FIELDS = ['genre', 'artist', 'album', 'title', 'track', 'year'];
 
-DB      = []; // song database
-ORIG_DB = []; // unblemished copy of DB, for filter
-PCACHE  = []; // player cache
-PMAX    = 4;  // maximum num cache entries
-PMAX    = (PMAX >= 2) ? PMAX : 2; // at least 2 to support prefetch
-
-function register_listeners() {
-  var f = elem('filter');
-  f.listen('focus',  suspend_kbd);
-  f.listen('blur',   enable_kbd);
-  f.listen('change', update_filter);
-
-  var c = elem('controls');
-  c.listen('click', control_click);
-
-  setInterval('draw_controls()', 250);
-}
-
-/* ------------------------- DISPLAY HANDLERS -------------------------- */
-
-function show() {
-  show_field('genre');
-  show_field('artist');
-  show_field('album');
-  show_field('title');
-}
-
-function show_field(f) {
-  var fs;
-  fs = query(f);
-  fs = map(selector(f), fs);
-  fs = list(fs);
-  elem(f + '-list').innerHTML = fs;
-}
-
-function select(field, v) {
-  switch(field) {
-    case 'genre':
-      state.genre  = v;
-      state.artist = '';
-      state.album  = '';
-      state.title  = '';
-      break;
-    case 'artist':
-      state.artist = v;
-      state.album  = '';
-      state.title  = '';
-      break;
-    case 'album':
-      state.album  = v;
-      state.title  = '';
-      break;
-    case 'title':
-      state.title  = v;
-      play(state_song());
-      break;
+function proj(field) {
+  return function(s) {
+    switch(field) {
+      case 'genre'  : return s.genre;
+      case 'artist' : return s.artist;
+      case 'album'  : return s.album;
+      case 'title'  : return s.title;
+      case 'track'  : return s.track;
+      case 'year'   : return s.year;
+      case 'art'    : return s.art;
+    }
   }
-  show();
 }
 
-/* ------------------------- PLAYER CONTROLS  -------------------------- */
+function match_upto(field) {
+  return function(s1) {
+    return function(s2) {
+      for(var i in FIELDS) {
+        if(FIELDS[i] == field)
+          break;
+        if(proj(FIELDS[i])(s1) != proj(FIELDS[i])(s2))
+          return false;
+      }
+      return true;
+    }
+  }
+}
+
+
+
 
 function progress_ratio() {
   try {
@@ -77,6 +40,8 @@ function progress_ratio() {
   }
 }
 
+setInterval(draw_controls, 250);
+
 // TODO remove arbitrary constants
 function draw_controls() {
   var P = elem('player');
@@ -84,7 +49,7 @@ function draw_controls() {
   var ctx = canvas.getContext('2d');
 
   // TODO get width and height
-  var X = 700;
+  var X = 750;
   var Y = 30;
   var MX = parseInt(X / 2);
   var MY = parseInt(Y / 2);
@@ -94,7 +59,7 @@ function draw_controls() {
 
   // progress line
   var PROG_L = 30;
-  var PROG_W = 500;
+  var PROG_W = 650;
   ctx.fillRect(PROG_L, MY, PROG_W, 1);
 
   // progress bead
@@ -155,231 +120,72 @@ function click_coords(e) {
   return [x, y];
 }
 
-/* ------------------------ KEY PRESS HANDLERS ------------------------- */
 
-function set_vol(x) {
-  var p = elem('player');
-  x = (x > 1) ? 1 : x;
-  x = (x < 0.01) ? 0.01 : x;
-  p.volume = x;
-}
 
-function seek(x) {
-  var p = elem('player');
-  x = (x < p.startTime) ? p.startTime : x;
-  x = (x > p.endTime) ? p.endTime : x;
-  p.currentTime = x;
-}
 
-function kbd(e) {
-  var x;
-  var p = elem('player');
-  switch(e.keyCode) {
-    case 32: // space
-      p.paused ? p.play() : p.pause();
-      break;
-    case 38: // up
-      set_vol(p.volume * 1.15);
-      break;
-    case 40: // down
-      set_vol(p.volume * 0.85);
-      break;
-    case 37: // left
-      if(e.ctrlKey) {
-        seek(p.currentTime - 5);
-      } else {
-        play(prev_song(p.song));
-      }
-      break;
-    case 39: // right
-      if(e.ctrlKey) {
-        seek(p.currentTime + 5);
-      } else {
-        play(next_song(p.song));
-      }
-      break;
-  }
-}
 
-document.onkeydown = kbd;
 
-function suspend_kbd() {
-  document.onkeydown = false;
-}
 
-function enable_kbd() {
-  document.onkeydown = kbd;
-}
+function SongDB(url) {
+  var db;
+  db = eval(fetch(url));
+  db = map(intify, db);
+  db.sort(song_cmp);
 
-/* --------------------------- SONG PLAYERS  --------------------------- */
+  this.db  = db;
+  this._db = db;
 
-function play(song) {
-  var p_old = elem('player');
-  try {
-    p_old.pause();
-    state.volume = p_old.volume;
-    p_old.currentTime = 0;
-  } catch(e) { /* whatever */ }
-
-  var p_new = fetch_player(song);
-  try {
-    p_new.play();
-    p_new.volume = state.volume;
-    p_new.currentTime = 0;
-  } catch(e) { /* whatever */ }
-
-  var p_div = elem('player-div');
-  p_div.removeChild(p_old);
-  p_div.appendChild(p_new);
-
-  elem('playing').innerHTML = 
-    song.artist + ' &nbsp; - &nbsp; ' +
-    song.album  + ' &nbsp; - &nbsp; ' +
-    song.title;
-
-  var art = elem('art');
-  if(song.art && song.art != '') {
-    art.style.visibility = 'visible';
-    art.src = song.art;
-  } else {
-    art.style.visibility = 'hidden';
-    art.src = '';
+  this.restore = function() {
+    this.db = this._db;
   }
 
-  document.title = song.title;
-  state.title = song.title;
-  show();
-}
+  this.index = function(s) {
+    return this.db.indexOf(s);
+  }
 
-function fetch_player(song) {
-  pull_in(song);
-  pull_in(next_song(song)); // prefetch
-  return lkup_player(song);
-}
+  this.size = function() {
+    return this.db.length;
+  }
 
-function lkup_player(song) {
-  for(var i in PCACHE) {
-    if(PCACHE[i].path == song.path) {
-      return PCACHE[i].player;
+  this.get = function(i) {
+    return this.db[i % this.size()];
+  }
+
+  this.next = function(s) {
+    var i = this.index(s);
+    return this.get(i + 1);
+  }
+
+  this.prev = function(s) {
+    var i = this.index(s);
+    return this.get(i - 1);
+  }
+
+  this.prep_filter = function(q) {
+    // prepend fields with param name 's'
+    var aux = function(acc, f) {
+      return acc.replace(new RegExp(f, 'g'), 's.' + f);
+    };
+    q = fold(aux, FIELDS, q);
+
+    // prevent db mod, assign ==> compare
+    q = q.replace(/([^!=])=([^=])/g, '$1==$2'); 
+    return q;
+  }
+
+  this.apply_filter = function(q) {
+    this.restore();
+    if(q != '') {
+      q = this.prep_filter(q);
+      var test = function(s) { return eval(q); };
+      this.db = filter(test, this.db);
     }
   }
-  return false;
-}
 
-function pull_in(song) {
-  if(!lkup_player(song)) {
-    var p = mk_player(song);
-    var e = {path: song.path, player: p};
-    PCACHE.push(e);
+  this.match_upto = function(field, s1) {
+    var test = match_upto(field)(s1);
+    return filter(test, this.db);
   }
-
-  // while too big, evict oldest entry
-  while(PCACHE.length > PMAX) {
-    PCACHE.shift();
-  }
-}
-
-function mk_player(song) {
-  var p = new Audio();
-  p.song = song;
-  p.id = 'player';
-  p.preload = 'auto';
-  p.autobuffer = true;
-  p.controls = true;
-  if(song.path.contains('http')) {
-    p.src = song.path;
-  } else {
-    p.src = escape(song.path);
-  }
-  p.addEventListener('ended',
-                     function() { play(next_song(p.song)); },
-                     false);
-  return p;
-}
-
-/* ---------------------------- DB QUERIES  ---------------------------- */
-
-function update_filter() {
-  DB = ORIG_DB; // restore
-  var f = elem('filter').value;
-  if(f != '') {
-    // prepend queryable fields with param name 's'
-    var fields = ['genre', 'artist', 'album', 'title', 'track', 'year'];
-    for(var i in fields) {
-      var find = new RegExp(fields[i], 'g');
-      var repl = 's.' + fields[i];
-      f = f.replace(find, repl);
-    }
-    // prevent songdb modification, assign ==> compare
-    f = f.replace(/([^!=])=([^=])/g, '$1==$2'); 
-    // only keep DB entries satisfying user filter
-    DB = filter(function(s) { return eval(f); }, DB);
-  }
-  show();
-}
-
-function query(field) {
-  var test = match_upto(field)(state);
-  var db = filter(test, DB);
-  var fs = map(proj(field), db);
-  return uniq(fs);
-}
-
-function match_upto(field) {
-  return function(s1) {
-    return function(s2) {
-      var fields = ['genre', 'artist', 'album', 'title'];
-      for(var i in fields) {
-        if(fields[i] == field)
-          break;
-        if(proj(fields[i])(s1) != proj(fields[i])(s2))
-          return false;
-      }
-      return true;
-    }
-  }
-}
-
-function proj(field) {
-  return function(s) {
-    switch(field) {
-      case 'genre'  : return s.genre;
-      case 'artist' : return s.artist;
-      case 'album'  : return s.album;
-      case 'title'  : return s.title;
-      case 'art'    : return s.art;
-    }
-  }
-}
-
-function state_song() {
-  var test = match_upto('')(state);
-  var db = filter(test, DB);
-  return db[0];
-}
-
-function prev_song(s) {
-  var i = DB.indexOf(s);
-  return DB[(i-1) % DB.length];
-}
-
-function next_song(s) {
-  var i = DB.indexOf(s);
-  return DB[(i+1) % DB.length];
-}
-
-/* ----------------------------- MUSIC DB ------------------------------ */
-
-function fetch_DB() {
-  var req = new XMLHttpRequest();
-  req.open('GET', '.songdb', false);
-  req.send('');
-  DB = eval(req.responseText);
-  DB = map(intify, DB);
-  DB.sort(song_cmp);
-
-  // save a clean copy so filter can restore
-  ORIG_DB = DB;
 }
 
 // cast apropriate fields from string to int
@@ -404,92 +210,392 @@ function song_cmp(s1, s2) {
   else                           return s1 - s2;
 }
 
-/* ------------------------- HTML MANIPULATION ------------------------- */
+function Menu() {
+  this.genre  = '';
+  this.artist = '';
+  this.album  = '';
+  this.title  = '';
+  this.db     = null;
+  this.player = null;
+
+  this.init = function(db, player) {
+    this.db = db;
+    this.player = player;
+  }
+
+  this.display = function() {
+    this.display_field('genre');
+    this.display_field('artist');
+    this.display_field('album');
+    this.display_field('title');
+  }
+
+  this.display_field = function(f) {
+    var list = elem(f + '-list');
+    list.innerHTML = '';
+
+    var opts = this.field_opts(f);
+    for(var i in opts) {
+      var a = this.selector(f, opts[i]);
+      var li = create('li');
+      li.appendChild(a);
+      list.appendChild(li);
+    }
+  }
+
+  this.select = function(field, opt) {
+    switch(field) {
+      case 'genre':
+        this.genre  = opt;
+        this.artist = '';
+        this.album  = '';
+        this.title  = '';
+        break;
+      case 'artist':
+        this.artist = opt;
+        this.album  = '';
+        this.title  = '';
+        break;
+      case 'album':
+        this.album  = opt;
+        this.title  = '';
+        break;
+      case 'title':
+        this.title  = opt;
+        this.player.play(this.song());
+        break;
+    }
+    this.display();
+  }
+
+  this.selector = function(field, opt) {
+    var a = create('a');
+    a.listen('click', mkselector(this, field, opt));
+    if(opt == proj(field)(this)) {
+      a.setAttribute('style', 'color: green; font-style: italic;');
+    }
+    a.innerHTML = opt;
+    return a;
+  }
+
+  this.match_upto = function(field) {
+    return this.db.match_upto(field, this);
+  }
+
+  this.field_opts = function(field) {
+    var ms = this.match_upto(field);
+    var fs = map(proj(field), ms);
+    return uniq(fs);
+  }
+
+  this.song = function() {
+    return this.match_upto('track')[0];
+  }
+}
+
+// TODO learn why this scoping works
+function mkselector(menu, field, opt) {
+  return function() {
+    menu.select(field, opt);
+  }
+}
+
+function Player() {
+  this.acache = [];
+  this.ncache = 4;
+  this.song   = null;
+  this.audio  = null;
+  this.db     = null;
+  this.menu   = null;
+
+  this.init = function(db, menu) {
+    this.db = db;
+    this.menu = menu;
+  }
+
+  this.play = function(song) {
+    this.song = song;
+
+    var v = 0.8;
+    try {
+      this.audio.pause();
+      v = this.audio.volume;
+      this.audio.currentTime = 0.0;
+    } catch(e) { /* ignore */ }
+
+    this.audio = this.fetch_audio(song);
+    this.audio.play();
+    this.audio.volume = v;
+
+    var pd = elem('player-div');
+    pd.innerHTML = '';
+    pd.appendChild(this.audio);
+
+    this.display();
+  }
+
+  this.display = function() {
+    var song = this.song;
+    var info = song.artist + ' &nbsp; - &nbsp; ' +
+               song.album  + ' &nbsp; - &nbsp; ' +
+               song.title;
+    if(info.length > 110) {
+      info = song.artist + ' &nbsp; - &nbsp; ' + song.title;
+    }
+    elem('playing').innerHTML = info;
+
+    var art = elem('art');
+    if(song.art && song.art != '') {
+      art.style.visibility = 'visible';
+      art.src = song.art;
+    } else {
+      art.style.visibility = 'hidden';
+      art.src = '';
+    }
+
+    document.title = song.title;
+    this.menu.title = song.title;
+    this.menu.display();
+  }
+
+  this.filter_change = function(q) {
+    q = q.trim();
+    this.db.apply_filter(q);
+    this.menu.display(); 
+  }
+
+  this.get_vol = function() {
+    return this.audio.volume;
+  }
+
+  this.set_vol = function(v) {
+    v = (v > 1) ? 1 : v;
+    v = (v < 0.01) ? 0.01 : v;
+    this.audio.volume = v;
+  }
+
+  this.inc_vol = function() {
+    var v = this.get_vol();
+    this.set_vol(v * 1.15);
+  }
+
+  this.dec_vol = function() {
+    var v = this.get_vol();
+    this.set_vol(v * 0.85);
+  }
+
+  this.get_time = function() {
+    return this.audio.currentTime;
+  }
+
+  this.set_time = function(t) {
+    t = (t < p.startTime) ? p.startTime : t;
+    t = (t > p.endTime) ? p.endTime : t;
+    this.audio.currentTime = t;
+  }
+
+  this.inc_time = function() {
+    var t = this.get_time();
+    this.set_time(t + 5);
+  }
+
+  this.dec_time = function() {
+    var t = this.get_time();
+    this.set_time(t - 5);
+  }
+
+  this.toggle = function() {
+    if(this.audio.paused)
+      this.audio.play();
+    else
+      this.audio.pause();
+  }
+
+  this.prev = function() {
+    var s = this.db.prev(this.song);
+    this.play(s);
+  }
+
+  this.next = function() {
+    var s = this.db.next(this.song);
+    this.play(s);
+  }
+
+  this.fetch_audio = function(song) {
+    this.pull_in(song);
+    this.pull_in(this.db.next(song)); // prefetch
+    return this.lkup_audio(song);
+  }
+
+  this.lkup_audio = function(song) {
+    for(var i in this.acache)
+      if(this.acache[i].path == song.path)
+        return this.acache[i].audio;
+    return false;
+  }
+
+  this.pull_in = function(song) {
+    if(!this.lkup_audio(song)) {
+      var a = this.mk_audio(song);
+      var e = {path: song.path, audio: a};
+      this.acache.push(e);
+    }
+
+    // while too big, evict oldest entry
+    while(this.acache.length > this.ncache)
+      this.acache.shift();
+  }
+
+  this.mk_audio = function(song) {
+    var a = new Audio();
+    a.song = song;
+    a.id = 'player';
+    a.preload = 'auto';
+    a.autobuffer = true;
+    a.controls = true;
+    if(song.path.contains('http')) {
+      a.src = song.path;
+    } else {
+      a.src = escape(song.path);
+    }
+    var p = this;
+    a.listen('ended', function() { p.next(); });
+    return a;
+  }
+}
+
+function kbd(player) {
+  return function(e) {
+    switch(e.keyCode) {
+      case 32: // space
+        player.toggle();
+        break;
+      case 38: // up
+        player.inc_vol();
+        break;
+      case 40: // down
+        player.dec_vol();
+        break;
+      case 37: // left
+        if(e.ctrlKey) {
+          player.dec_time();
+        } else {
+          player.prev();
+        }
+        break;
+      case 39: // right
+        if(e.ctrlKey) {
+          player.inc_time();
+        } else {
+          player.next();
+        }
+        break;
+    }
+    // do not propagate
+    switch(e.keyCode) {
+      case 32: // space
+      case 38: // up
+      case 40: // down
+      case 37: // left
+      case 39: // right
+        kill_event(e);
+    }
+  }
+}
+
+// TODO understand javascript closure scoping
+// very tricky on these keyboard events
+
+function suspend_kbd() {
+  document.onkeydown = null;
+}
+
+function enable_kbd(player) {
+  return function() {
+    document.onkeydown = kbd(player);
+  }
+}
+
+function filter_change(player) {
+  return function() {
+    var f = elem('filter');
+    player.filter_change(f.value);
+  }
+}
+
+function register(player) {
+  var f = elem('filter');
+  f.listen('focus',  suspend_kbd);
+  f.listen('blur',   enable_kbd(player));
+  f.listen('change', filter_change(player));
+
+  enable_kbd(player)();
+}
+
+/* ------------------------- PROGRAMMING SUPPORT ----------------------- */
 
 function elem(id) {
   return document.getElementById(id);
+}
+
+function create(tag) {
+  return document.createElement(tag);
 }
 
 HTMLElement.prototype.listen = function(e, f) {
   this.addEventListener(e, f, false);
 }
 
-function list(l) {
-  function f(e) {
-    return '<li>' + e + '</li>'
-  }
-  var list;
-  list = map(f, l);
-  list = concat('\n', list);
-  return list;
+String.prototype.contains = function(s) {
+  return this.indexOf(s) != -1;
 }
 
-function selector(field) {
-  return function(v) {
-    var style = '';
-    if(v == proj(field)(state)) {
-      style = 'style=\'color: green; font-style: italic;\' ';
-    }
-    v = v.replace(/&/g, "&amp;");
-    v = v.replace(/'/g, "&#39;");
+String.prototype.trim = function() {
+  return String(this).replace(/^\s+|\s+$/g, '');
+}
 
-    // no sprintf, not worth importing lib
-    var a;
-    a = '<a %s onclick=\'select("%s", "%s");\'>%s</a>';
-    a = a.replace('%s', style);
-    a = a.replace('%s', field);
-    a = a.replace('%s', v);
-    a = a.replace('%s', v);
-    return a;
+function fetch(url) {
+  var req = new XMLHttpRequest();
+  req.open('GET', url, false);
+  req.send('');
+  return req.responseText;
+}
+
+function kill_event(e) {
+  e.cancelBubble = true;
+  e.returnValue  = false;
+  if(e.stopPropagation) {
+    e.stopPropagation();
+    e.preventDefault();
   }
 }
 
-/* ------------------------- PROGRAMMING SUPPORT ----------------------- */
+function fold(f, arr, acc) {
+  for(var i in arr)
+    acc = f(acc, arr[i]);
+  return acc;
+}
 
 function map(f, arr) {
   var res = [];
-  for(var i in arr) {
-    var e = arr[i];
-    res.push(f(e));
-  }
+  for(var i in arr)
+    res.push(f(arr[i]));
   return res;
 }
 
 function filter(test, arr) {
   var res = [];
-  for(var i in arr) {
-    var e = arr[i];
-    if(test(e)) {
-      res.push(e);
-    }
-  }
+  for(var i in arr)
+    if(test(arr[i]))
+      res.push(arr[i]);
   return res;
 }
 
 function uniq(arr) {
   var res = [];
-  for(var i in arr) {
-    var e = arr[i];
-    if(res.indexOf(e) == -1) {
-      res.push(e);
-    }
-  }
+  for(var i in arr)
+    if(res.indexOf(arr[i]) == -1)
+      res.push(arr[i]);
   return res;
 }
-
-function concat(sep, arr) {
-  var res = '';
-  for(var i in arr) {
-    if(i > 0) {
-      res += sep;
-    }
-    res += arr[i];
-  }
-  return res;
-}
-
-String.prototype.contains =
-  function(s) {
-    return this.indexOf(s) != -1;
-  }
 
