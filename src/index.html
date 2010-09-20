@@ -12,9 +12,9 @@
 <div id='top'>
   <div id='control-div'>
     <p id='playing'>&nbsp;</p>
-    <canvas id='controls' width='750px' height='30px'></canvas>
+    <canvas id='controls' width='750px' height='20px'></canvas>
     <div id='player-div'>
-      <audio id='player' controls></audio>
+      <audio id='player'></audio>
     </div>
     <input id='filter' type='text' />
   </div>
@@ -43,11 +43,12 @@
   d = new SongDB('.songdb');
   m = new Menu();
   p = new Player();
+  c = new Controls(p, 750, 20);
 
   m.init(d, p);
   p.init(d, m);
   m.display();
-  register(p);
+  register(p, c);
 </script>
 
 </div>

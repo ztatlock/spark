@@ -31,54 +31,52 @@ function match_upto(field) {
 
 
 
-function progress_ratio() {
-  try {
-    var p = elem('player');
-    return p.currentTime / p.duration;
-  } catch(e) {
-    return 0.0;
+function Controls(player, width, height) {
+  this.player = player;
+  this.width  = width;
+  this.height = height;
+
+  this.draw = function () {
+    var w  = this.width;
+    var h  = this.height;
+    var mw = w / 2;
+    var mh = h / 2;
+
+    var canvas = elem('controls');
+    var c = canvas.getContext('2d');
+
+    // clear
+    canvas.width = canvas.width;
+
+    // play / pause
+    if(this.player.paused()) {
+      c.beginPath();
+      c.moveTo(0,  0);
+      c.lineTo(15, mh);
+      c.lineTo(0,  h);
+      c.fill();
+    } else {
+      c.fillRect(0,  0, 5, h);
+      c.fillRect(10, 0, 5, h);
+    }
+
+    // progress line
+    var prog_l = 30;
+    var prog_w = 630;
+    c.fillRect(prog_l, mh, prog_w, 1);
+
+    // progress bead
+    var r = prog_w * this.player.progress();
+    var x = parseInt(prog_l + r);
+    if(this.player.audio) {
+      c.fillRect(x, mh - 5, 3, 11);
+    }
   }
 }
 
-setInterval(draw_controls, 250);
 
-// TODO remove arbitrary constants
-function draw_controls() {
-  var P = elem('player');
-  var canvas = elem('controls');
-  var ctx = canvas.getContext('2d');
 
-  // TODO get width and height
-  var X = 750;
-  var Y = 30;
-  var MX = parseInt(X / 2);
-  var MY = parseInt(Y / 2);
 
-  // clear
-  canvas.width = canvas.width;
-
-  // progress line
-  var PROG_L = 30;
-  var PROG_W = 650;
-  ctx.fillRect(PROG_L, MY, PROG_W, 1);
-
-  // progress bead
-  var r = PROG_W * progress_ratio();
-  var x = parseInt(PROG_L + r);
-  ctx.fillRect(x, MY - 5, 3, 11);
-
-  // play / pause
-  if(P.paused) {
-    ctx.beginPath();
-    ctx.moveTo(5,  7);
-    ctx.lineTo(17, MY);
-    ctx.lineTo(5,  Y - 7);
-    ctx.fill();
-  } else {
-    ctx.fillRect(5,  7, 4, Y - 14);
-    ctx.fillRect(13, 7, 4, Y - 14);
-  }
-}
 
 function control_click(e) {
   var coords = click_coords(e);
@@ -364,6 +362,14 @@ function Player() {
     this.menu.display(); 
   }
 
+  this.progress = function() {
+    try {
+      return this.audio.currentTime / this.audio.duration;
+    } catch(e) {
+      return 0.0;
+    }
+  }
+
   this.get_vol = function() {
     return this.audio.volume;
   }
@@ -411,6 +417,14 @@ function Player() {
       this.audio.pause();
   }
 
+  this.paused = function() {
+    try {
+      return this.audio.paused;
+    } catch(e) {
+      return true;
+    }
+  }
+
   this.prev = function() {
     var s = this.db.prev(this.song);
     this.play(s);
@@ -452,7 +466,7 @@ function Player() {
     a.id = 'player';
     a.preload = 'auto';
     a.autobuffer = true;
-    a.controls = true;
+    a.controls = false;
     if(song.path.contains('http')) {
       a.src = song.path;
     } else {
@@ -523,13 +537,20 @@ function filter_change(player) {
   }
 }
 
-function register(player) {
+function draw_controls(controls) {
+  return function() {
+    controls.draw();
+  }
+}
+
+function register(player, controls) {
   var f = elem('filter');
   f.listen('focus',  suspend_kbd);
   f.listen('blur',   enable_kbd(player));
   f.listen('change', filter_change(player));
 
   enable_kbd(player)();
+  setInterval(draw_controls(controls), 200);
 }
 
 /* ------------------------- PROGRAMMING SUPPORT ----------------------- */
