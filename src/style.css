@@ -12,10 +12,6 @@ body {
   margin: 0 auto;
 }
 
-#top {
-  margin-bottom: 8px;
-}
-
 #control-div, #art-div {
   display: inline-block;
   vertical-align: top;
@@ -23,22 +19,11 @@ body {
 
 #playing {
   font-size: 14pt;
-  margin-bottom: 8px;
-}
-
-#player {
-  width: 750px;
-  margin-bottom: 8px;
-}
-
-#controls {
-  margin-bottom: 8px;
-  padding-left: 3px;
+  margin-bottom: 5px;
 }
 
 #filter {
-  width: 740px;
-  margin-bottom: 8px;
+  width: 730px;
 }
 
 #art {

@@ -51,18 +51,18 @@ function Controls(player, width, height) {
     // play / pause
     if(this.player.paused()) {
       c.beginPath();
-      c.moveTo(0,  0);
-      c.lineTo(15, mh);
-      c.lineTo(0,  h);
+      c.moveTo(2,  5);
+      c.lineTo(17, mh);
+      c.lineTo(2,  h-5);
       c.fill();
     } else {
-      c.fillRect(0,  0, 5, h);
-      c.fillRect(10, 0, 5, h);
+      c.fillRect(2,  5, 5, h-10);
+      c.fillRect(12, 5, 5, h-10);
     }
 
     // progress line
     var prog_l = 30;
-    var prog_w = 630;
+    var prog_w = w - 70;
     c.fillRect(prog_l, mh, prog_w, 1);
 
     // progress bead
@@ -71,12 +71,22 @@ function Controls(player, width, height) {
     if(this.player.audio) {
       c.fillRect(x, mh - 5, 3, 11);
     }
+
+    // volume
+    for(var i=1; i<5; i++) {
+      c.fillRect( w - 35 + i * 7
+                , mh - i * 2
+                , 3
+                , i * 4
+                );
+    }
   }
 }
 
 
 
 
+/*
 
 function control_click(e) {
   var coords = click_coords(e);
@@ -85,11 +95,10 @@ function control_click(e) {
 
   // TODO remove arbitrary constants
   if(x > 3 && x < 20 && y > 5 && y < 25) {
-    var p = elem('player');
-    if(p.paused) {
-      p.play();
+    if(this.player.paused()) {
+      this.player.play();
     } else {
-      p.pause();
+      this.player.pause();
     }
   }
 
@@ -118,7 +127,7 @@ function click_coords(e) {
   return [x, y];
 }
 
-
+*/
 
 
 
@@ -325,10 +334,6 @@ function Player() {
     this.audio.play();
     this.audio.volume = v;
 
-    var pd = elem('player-div');
-    pd.innerHTML = '';
-    pd.appendChild(this.audio);
-
     this.display();
   }
 
@@ -463,7 +468,6 @@ function Player() {
   this.mk_audio = function(song) {
     var a = new Audio();
     a.song = song;
-    a.id = 'player';
     a.preload = 'auto';
     a.autobuffer = true;
     a.controls = false;

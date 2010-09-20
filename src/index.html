@@ -12,10 +12,8 @@
 <div id='top'>
   <div id='control-div'>
     <p id='playing'>&nbsp;</p>
-    <canvas id='controls' width='750px' height='20px'></canvas>
-    <div id='player-div'>
-      <audio id='player'></audio>
-    </div>
+    <canvas id='controls' width='740px' height='30px'></canvas>
+    <br /> <!-- why is this break necessary? -->
     <input id='filter' type='text' />
   </div>
   <div id='art-div'>
@@ -43,7 +41,7 @@
   d = new SongDB('.songdb');
   m = new Menu();
   p = new Player();
-  c = new Controls(p, 750, 20);
+  c = new Controls(p, 740, 30);
 
   m.init(d, p);
   p.init(d, m);
