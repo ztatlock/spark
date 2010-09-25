@@ -24,6 +24,7 @@ body {
 
 #filter {
   width: 730px;
+  margin-top: 5px;
 }
 
 #art {
@@ -35,10 +36,12 @@ body {
 
 #genre-div {
   float: top;
+  padding-left: 2px;
 }
 
 #artist-div, #album-div, #title-div {
   float: left;
+  padding-left: 2px;
   margin: 20px 20px 0 0;
 }
 
