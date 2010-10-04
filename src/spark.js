@@ -28,15 +28,23 @@ function match_upto(field) {
   }
 }
 
-
-
-
 function Controls(player, width, height) {
-  this.player = player;
-  this.width  = width;
-  this.height = height;
+  this.player  = player;
+  this.width   = width;
+  this.height  = height;
+  this.regions = [];
 
-  this.draw = function () {
+  this.addregion = function(name, lft, top, rht, bot) {
+    var r = { name: name
+            , lft:  lft
+            , top:  top
+            , rht:  rht
+            , bot:  bot
+            };
+    this.regions.push(r);
+  }
+
+  this.draw = function() {
     var w  = this.width;
     var h  = this.height;
     var mw = w / 2;
@@ -47,6 +55,7 @@ function Controls(player, width, height) {
 
     // clear
     canvas.width = canvas.width;
+    this.regions = [];
 
     // play / pause
     if(this.player.paused()) {
@@ -59,11 +68,13 @@ function Controls(player, width, height) {
       c.fillRect(2,  5, 5, h-10);
       c.fillRect(12, 5, 5, h-10);
     }
+    this.addregion('toggle', 2, 5, 17, h-5);
 
     // progress line
     var prog_l = 30;
     var prog_w = w - 70;
     c.fillRect(prog_l, mh, prog_w, 1);
+    this.addregion('seek', prog_l, mh - 2, prog_l + prog_w, mh + 2);
 
     // progress bead
     var r = prog_w * this.player.progress();
@@ -81,57 +92,48 @@ function Controls(player, width, height) {
                 );
     }
   }
-}
 
-
-
-
-/*
-
-function control_click(e) {
-  var coords = click_coords(e);
-  var x = coords.shift();
-  var y = coords.shift();
-
-  // TODO remove arbitrary constants
-  if(x > 3 && x < 20 && y > 5 && y < 25) {
-    if(this.player.paused()) {
-      this.player.play();
+  this.click_coords = function(e) {
+    var x;
+    var y;
+    if (e.pageX != undefined && e.pageY != undefined) {
+      x = e.pageX;
+      y = e.pageY;
     } else {
-      this.player.pause();
+      var l = document.body.scrollLeft + document.documentElement.scrollLeft;
+      var t = document.body.scrollTop + document.documentElement.scrollTop;
+      x = e.clientX + l;
+      y = e.clientY + t;
+    }
+    var c = elem('controls');
+    x -= c.offsetLeft;
+    y -= c.offsetTop;
+    return [x, y];
+  }
+
+  this.handle_click = function(e) {
+    var coords = this.click_coords(e);
+    var x = coords.shift();
+    var y = coords.shift();
+
+    for(var i in this.regions) {
+      var r = this.regions[i];
+      if(r.lft < x && x < r.rht &&
+         r.bot < y && y < r.top) {
+        switch(r.name) {
+          case 'toggle':
+            if(this.player.paused()) {
+              this.player.play();
+            } else {
+              this.player.pause();
+            }
+
+        }
+      }
     }
   }
 
-  // TODO seek
-
-  elem('debug').innerHTML =
-    'x : ' + x + '<br />' +
-    'y : ' + y;
 }
-
-function click_coords(e) {
-  var x;
-  var y;
-  if (e.pageX != undefined && e.pageY != undefined) {
-    x = e.pageX;
-    y = e.pageY;
-  } else {
-    var l = document.body.scrollLeft + document.documentElement.scrollLeft;
-    var t = document.body.scrollTop + document.documentElement.scrollTop;
-    x = e.clientX + l;
-    y = e.clientY + t;
-  }
-  var c = elem('controls');
-  x -= c.offsetLeft;
-  y -= c.offsetTop;
-  return [x, y];
-}
-
-*/
-
-
-
-
 
 function SongDB(url) {
   var db;
@@ -547,11 +549,20 @@ function draw_controls(controls) {
   }
 }
 
+function control_click(controls) {
+  return function(e) {
+    controls.handle_click(e);
+  }
+}
+
 function register(player, controls) {
   var f = elem('filter');
   f.listen('focus',  suspend_kbd);
   f.listen('blur',   enable_kbd(player));
   f.listen('change', filter_change(player));
+
+  var c = elem('controls');
+  c.listen('click', control_click(controls));
 
   enable_kbd(player)();
   setInterval(draw_controls(controls), 200);
