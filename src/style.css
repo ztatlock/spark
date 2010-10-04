@@ -76,12 +76,12 @@ a:hover {
 
 input {
   font-size: 14pt;
-  border: 1px solid #ccc;
+  border: 1px solid black;
   padding: 5px 0 5px 10px;
   border-radius: 5px;
 }
 
 input:not(:focus) {
-  opacity: 0.6;
+  opacity: 0.4;
 }
 

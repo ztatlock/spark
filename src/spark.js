@@ -31,7 +31,7 @@ function match_upto(field) {
 function SongDB(url) {
   var db;
   db = eval(fetch(url));
-  db = map(intify, db);
+  db = map(song_intify, db);
   db.sort(song_cmp);
 
   this.db  = db;
@@ -41,44 +41,34 @@ function SongDB(url) {
     this.db = this._db;
   }
 
-  this.index = function(s) {
-    return this.db.indexOf(s);
-  }
-
-  this.size = function() {
-    return this.db.length;
-  }
-
   this.get = function(i) {
-    return this.db[i % this.size()];
+    return this.db[i % this.db.length];
   }
 
   this.next = function(s) {
-    var i = this.index(s);
+    var i = this.db.indexOf(s);
     return this.get(i + 1);
   }
 
   this.prev = function(s) {
-    var i = this.index(s);
+    var i = this.db.indexOf(s);
     return this.get(i - 1);
-  }
-
-  this.prep_filter = function(q) {
-    // prepend fields with param name 's'
-    var aux = function(acc, f) {
-      return acc.replace(new RegExp(f, 'g'), 's.' + f);
-    };
-    q = fold(aux, FIELDS, q);
-
-    // prevent db mod, assign ==> compare
-    q = q.replace(/([^!=])=([^=])/g, '$1==$2'); 
-    return q;
   }
 
   this.apply_filter = function(q) {
     this.restore();
+    q = q.trim();
     if(q != '') {
-      q = this.prep_filter(q);
+      // prepend fields with param 's'
+      for(var i in FIELDS) {
+        var f = FIELDS[i];
+        var r = new RegExp(f, 'g');
+        q = q.replace(r, 's.' + f);
+      }
+
+      // prevent db mod, assign ==> compare
+      q = q.replace(/([^!=])=([^=])/g, '$1==$2'); 
+
       var test = function(s) { return eval(q); };
       this.db = filter(test, this.db);
     }
@@ -91,7 +81,7 @@ function SongDB(url) {
 }
 
 // cast apropriate fields from string to int
-function intify(s) {
+function song_intify(s) {
   s.year  = parseInt(s.year,  10);
   s.track = parseInt(s.track, 10);
   s.total = parseInt(s.total, 10);
@@ -145,6 +135,31 @@ function Menu() {
     }
   }
 
+  this.selector = function(field, opt) {
+    var a = create('a');
+    var h = mkselector(this, field, opt);
+    a.listen('click', h);
+    if(opt == proj(field)(this)) {
+      a.setAttribute('style', 'color: green; font-style: italic;');
+    }
+    a.innerHTML = opt;
+    return a;
+  }
+
+  this.match_upto = function(field) {
+    return this.db.match_upto(field, this);
+  }
+
+  this.song = function() {
+    return this.match_upto('track')[0];
+  }
+
+  this.field_opts = function(field) {
+    var ms = this.match_upto(field);
+    var fs = map(proj(field), ms);
+    return uniq(fs);
+  }
+
   this.select = function(field, opt) {
     switch(field) {
       case 'genre':
@@ -169,33 +184,9 @@ function Menu() {
     }
     this.display();
   }
-
-  this.selector = function(field, opt) {
-    var a = create('a');
-    a.listen('click', mkselector(this, field, opt));
-    if(opt == proj(field)(this)) {
-      a.setAttribute('style', 'color: green; font-style: italic;');
-    }
-    a.innerHTML = opt;
-    return a;
-  }
-
-  this.match_upto = function(field) {
-    return this.db.match_upto(field, this);
-  }
-
-  this.field_opts = function(field) {
-    var ms = this.match_upto(field);
-    var fs = map(proj(field), ms);
-    return uniq(fs);
-  }
-
-  this.song = function() {
-    return this.match_upto('track')[0];
-  }
 }
 
-// TODO learn why this scoping works
+// TODO learn javascript scoping, why is this necessary?
 function mkselector(menu, field, opt) {
   return function() {
     menu.select(field, opt);
@@ -233,11 +224,7 @@ function Player() {
     pd.innerHTML = '';
     pd.appendChild(this.audio);
 
-    this.display();
-  }
-
-  this.display = function() {
-    var song = this.song;
+    // update display
     var info = song.artist + ' &nbsp; - &nbsp; ' +
                song.album  + ' &nbsp; - &nbsp; ' +
                song.title;
@@ -261,7 +248,6 @@ function Player() {
   }
 
   this.filter_change = function(q) {
-    q = q.trim();
     this.db.apply_filter(q);
     this.menu.display(); 
   }
@@ -355,7 +341,7 @@ function Player() {
     a.preload = 'auto';
     a.autobuffer = true;
     a.controls = true;
-    if(song.path.contains('http')) {
+    if(song.path.indexOf('http') != -1) {
       a.src = song.path;
     } else {
       a.src = escape(song.path);
@@ -405,9 +391,6 @@ function kbd(player) {
   }
 }
 
-// TODO understand javascript closure scoping
-// very tricky on these keyboard events
-
 function suspend_kbd() {
   document.onkeydown = null;
 }
@@ -448,10 +431,6 @@ HTMLElement.prototype.listen = function(e, f) {
   this.addEventListener(e, f, false);
 }
 
-String.prototype.contains = function(s) {
-  return this.indexOf(s) != -1;
-}
-
 String.prototype.trim = function() {
   return String(this).replace(/^\s+|\s+$/g, '');
 }
@@ -470,12 +449,6 @@ function kill_event(e) {
     e.stopPropagation();
     e.preventDefault();
   }
-}
-
-function fold(f, arr, acc) {
-  for(var i in arr)
-    acc = f(acc, arr[i]);
-  return acc;
 }
 
 function map(f, arr) {
