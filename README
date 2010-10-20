@@ -1,1 +1,12 @@
 spark: javascript + HTML5 music player
+
+To build a webpage to play any mp3 reachable from FOO/ simply:
+
+  $ cd FOO/
+  $ cp -r /path/to/spark/spark .
+  $ cd spark
+  $ ./gen-songdb
+
+Now http://your.domain.net/FOO/spark will serve up music under FOO.
+(Assuming the prefix up to FOO is already being served.)
+
