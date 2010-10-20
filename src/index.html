@@ -9,17 +9,14 @@
 <body>
 <div id='wrap'>
 
-<div id='top'>
-  <div id='control-div'>
-    <p id='playing'>&nbsp;</p>
-    <div id='player-div'>
-      <audio id='player' controls></audio>
-    </div>
-    <input id='filter' type='text' />
-  </div>
-  <div id='art-div'>
-    <img id='art' />
-  </div>
+<p id='playing'>&nbsp;</p>
+
+<div id='player-div'>
+  <audio id='player' controls></audio>
+</div>
+
+<div id='filter-div'>
+  <input id='filter' type='text' />
 </div>
 
 <div id='genre-div'>
@@ -39,7 +36,7 @@
 </div>
 
 <script type='text/javascript'>
-  d = new SongDB('.songdb');
+  d = new SongDB('songdb');
   m = new Menu();
   p = new Player();
 

@@ -1,4 +1,4 @@
-FIELDS = ['genre', 'artist', 'album', 'title', 'track', 'year'];
+FIELDS = ['genre', 'artist', 'album', 'title', 'track'];
 
 function proj(field) {
   return function(s) {
@@ -8,8 +8,6 @@ function proj(field) {
       case 'album'  : return s.album;
       case 'title'  : return s.title;
       case 'track'  : return s.track;
-      case 'year'   : return s.year;
-      case 'art'    : return s.art;
     }
   }
 }
@@ -82,7 +80,6 @@ function SongDB(url) {
 
 // cast apropriate fields from string to int
 function song_intify(s) {
-  s.year  = parseInt(s.year,  10);
   s.track = parseInt(s.track, 10);
   s.total = parseInt(s.total, 10);
   return s;
@@ -93,8 +90,6 @@ function song_cmp(s1, s2) {
   else if(s1.genre  > s2.genre)  return  1;
   else if(s1.artist < s2.artist) return -1;
   else if(s1.artist > s2.artist) return  1;
-  else if(s1.year   < s2.year)   return -1;
-  else if(s1.year   > s2.year)   return  1;
   else if(s1.album  < s2.album)  return -1;
   else if(s1.album  > s2.album)  return  1;
   else if(s1.track  < s2.track)  return -1;
@@ -225,23 +220,10 @@ function Player() {
     pd.appendChild(this.audio);
 
     // update display
-    var info = song.artist + ' &nbsp; - &nbsp; ' +
-               song.album  + ' &nbsp; - &nbsp; ' +
-               song.title;
-    if(info.length > 110) {
-      info = song.artist + ' &nbsp; - &nbsp; ' + song.title;
-    }
-    elem('playing').innerHTML = info;
-
-    var art = elem('art');
-    if(song.art && song.art != '') {
-      art.style.visibility = 'visible';
-      art.src = song.art;
-    } else {
-      art.style.visibility = 'hidden';
-      art.src = '';
-    }
-
+    elem('playing').innerHTML = 
+      song.artist + ' &nbsp; - &nbsp; ' +
+      song.album  + ' &nbsp; - &nbsp; ' +
+      song.title;
     document.title = song.title;
     this.menu.title = song.title;
     this.menu.display();
