@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 
-import os, sys, glob, getpass, eyeD3
-
-owner = getpass.getuser()
+import os, sys, glob, eyeD3
 
 def main():
   ss = songs('.')
-  js = map(song_to_js, ss)
+  js = map(song_js, ss)
   db = '[%s]' % (','.join(js))
   write(db)  
 
@@ -15,11 +13,14 @@ def songs(dir):
   # unsafe for symlink cycles
   for root, dirs, fnms in os.walk(dir, followlinks=True):
     ss = [os.path.join(root, fnm) for fnm in fnms]
-    ss = [s for s in ss if s.lower().endswith('mp3')]
+    ss = filter(ismp3, ss)
     res.extend(ss)
   return res
 
-def song_to_js(path):
+def ismp3(s):
+  return s.lower().endswith('mp3')
+
+def song_js(path):
     tag = eyeD3.Tag()
     tag.link(path)
     return '''
@@ -31,8 +32,6 @@ def song_to_js(path):
 , track  : "%s"
 , total  : "%s"
 , title  : "%s"
-, art    : "%s"
-, owner  : "%s"
 }
 ''' % ( tag.linkedFile.name
       , tag.getGenre().getName().lower()
@@ -42,24 +41,14 @@ def song_to_js(path):
       , tag.getTrackNum()[0]
       , tag.getTrackNum()[1]
       , tag.getTitle()
-      , album_art(path)
-      , owner
       )
-
-def album_art(path):
-  imgs = glob.glob('%s/*.jpg' % os.path.dirname(path))
-  if len(imgs) > 0:
-    img = imgs[0]
-  else:
-    img = ''
-  return img
 
 def write(db):
   try:
-    f = open('.songdb', 'w')
+    f = open('songdb', 'w')
     f.write(db)
     f.close()
   except:
-    sys.error('Error: unable to write .songdb')
+    sys.error('Error: unable to write songdb')
 
 main()
