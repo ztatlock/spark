@@ -3,7 +3,7 @@
 import os, sys, glob, eyeD3
 
 def main():
-  ss = songs('.')
+  ss = songs('..')
   js = map(song_js, ss)
   db = '[%s]' % (','.join(js))
   write(db)  

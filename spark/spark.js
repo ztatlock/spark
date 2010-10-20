@@ -323,11 +323,7 @@ function Player() {
     a.preload = 'auto';
     a.autobuffer = true;
     a.controls = true;
-    if(song.path.indexOf('http') != -1) {
-      a.src = song.path;
-    } else {
-      a.src = escape(song.path);
-    }
+    a.src = escape(song.path);
     var p = this;
     a.listen('ended', function() { p.next(); });
     return a;
