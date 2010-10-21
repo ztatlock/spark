@@ -5,7 +5,7 @@ html {
 
 body {
   font-family: sans-serif;
-  font-size: 12pt;
+  font-size: 10pt;
 }
 
 #wrap {
@@ -14,8 +14,8 @@ body {
 }
 
 #playing {
-  font-size: 14pt;
-  margin: 20px 0 8px 0;
+  font-size: 12pt;
+  margin: 30px 0 8px 0;
 }
 
 #player {
@@ -61,7 +61,7 @@ a:hover {
 }
 
 input {
-  font-size: 14pt;
+  font-size: 12pt;
   border: 1px solid black;
   padding: 5px 0 5px 10px;
   border-radius: 5px;
