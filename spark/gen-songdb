@@ -28,7 +28,6 @@ def song_js(path):
 , genre  : "%s"
 , artist : "%s"
 , album  : "%s"
-, year   : "%s"
 , track  : "%s"
 , total  : "%s"
 , title  : "%s"
@@ -37,7 +36,6 @@ def song_js(path):
       , tag.getGenre().getName().lower()
       , tag.getArtist()
       , tag.getAlbum()
-      , tag.getYear()
       , tag.getTrackNum()[0]
       , tag.getTrackNum()[1]
       , tag.getTitle()

@@ -1,0 +1,111 @@
+#!/usr/bin/env python
+
+# tag mp3s based on filename
+
+import re, glob, os, sys
+
+LIB = '~/music'
+LIB = os.path.expanduser(LIB)
+
+# song path regexp to extract tag info
+#
+# group   meaning
+# -----   -------
+# 1       genre
+# 2       artist
+# 3       album
+# 4       track
+# 5       title
+# 6       extension
+#
+# groups:                 1       2       3       4              5     6
+song_re = re.compile('^.*/([^/]+)/([^/]+)/([^/]+)/([0-9][0-9]) - (.*)\.(.*)$')
+
+def main(args):
+  args.pop(0) # remove prog name
+  if args == []:
+    args = all_albums()
+  for a in args:
+    tag_album(a)
+
+def all_albums():
+  return glob.glob('%s/*/*/*' % LIB)
+
+def tag_album(a):
+  ss = songs(a)
+  if len(ss) > 0:
+    ss[0].print_common()
+  for s in ss:
+    s.print_uniq()
+    s.tag()
+
+def songs(album):
+  try:
+    songs = os.listdir(album)
+  except:
+    sys.exit('Error: unable to ls album "%s"' % album)
+
+  # parse paths into song objects
+  songs = [ album + '/' + s for s in songs ]
+  songs = [ Song(s) for s in songs ]
+
+  # set total num of tracks
+  t = max([s.track for s in songs])
+  for s in songs:
+    s.total = t
+
+  songs.sort()
+  return songs
+
+class Song:
+  def __init__(self, path):
+    self.path = os.path.abspath(path)
+
+    match = song_re.match(self.path)
+    if match == None:
+      sys.exit('Error: invalid song "%s"' % path)
+    else:
+      self.genre  = match.group(1)
+      self.artist = match.group(2)
+      self.album  = match.group(3)
+      self.track  = match.group(4)
+      self.title  = match.group(5)
+      self.type   = match.group(6)
+
+    if self.type != "mp3":
+      sys.exit('Error: cannot handle file type "%s"' % path)
+
+  def tag(self):
+    cmd  = 'eyeD3'
+    cmd += ' --remove-all'       # nuke any previous tags
+    cmd += ' --genre="%s"'       % self.genre
+    cmd += ' --artist="%s"'      % self.artist
+    cmd += ' --album="%s"'       % self.album
+    cmd += ' --track="%s"'       % self.track
+    cmd += ' --title="%s"'       % self.title
+    cmd += ' --track-total="%s"' % self.total
+    cmd += ' "%s"'               % self.path
+    cmd += ' > /dev/null 2>&1'
+    ret = os.system(cmd)
+
+    if ret != 0:
+      name = os.path.basename(self.path)
+      msg = 'Error: eyeD3 failed on "%s"\n\n%s' % (name, cmd)
+      sys.exit(msg)
+
+  def print_uniq(self):
+    print '  %s / %s  %s' % (self.track, self.total, self.title)
+
+  def print_common(self):
+    print """
+genre  : %s
+artist : %s
+album  : %s
+""" % (self.genre, self.artist, self.album)
+
+  def __cmp__(self, other):
+    return int(self.track) - int(other.track)
+
+
+main(sys.argv)
+
