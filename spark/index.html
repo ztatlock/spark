@@ -9,7 +9,7 @@
 <body>
 <div id='wrap'>
 
-<p id='playing'>&nbsp;</p>
+<p id='playing'>spark</p>
 
 <div id='player-div'>
   <audio id='player' controls></audio>
@@ -36,14 +36,7 @@
 </div>
 
 <script type='text/javascript'>
-  d = new SongDB('songdb');
-  m = new Menu();
-  p = new Player();
-
-  m.init(d, p);
-  p.init(d, m);
-  m.display();
-  register(p);
+  main();
 </script>
 
 </div>

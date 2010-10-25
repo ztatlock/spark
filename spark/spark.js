@@ -1,5 +1,16 @@
 FIELDS = ['genre', 'artist', 'album', 'title', 'track'];
 
+function main() {
+  d = new SongDB();
+  m = new Menu();
+  p = new Player();
+
+  m.init(d, p);
+  p.init(d, m);
+  m.display();
+  register(p);
+}
+
 function proj(field) {
   return function(s) {
     switch(field) {
@@ -26,9 +37,9 @@ function match_upto(field) {
   }
 }
 
-function SongDB(url) {
+function SongDB() {
   var db;
-  db = eval(fetch(url));
+  db = eval(fetch('songdb'));
   db = map(song_intify, db);
   db.sort(song_cmp);
 
@@ -132,10 +143,11 @@ function Menu() {
 
   this.selector = function(field, opt) {
     var a = create('a');
-    var h = mkselector(this, field, opt);
-    a.listen('click', h);
+    var s = mkselector(this, field, opt);
+    a.listen('click', s);
     if(opt == proj(field)(this)) {
-      a.setAttribute('style', 'color: green; font-style: italic;');
+      a.style.color = 'green';
+      a.style.fontStyle = 'italic';
     }
     a.innerHTML = opt;
     return a;
@@ -181,7 +193,7 @@ function Menu() {
   }
 }
 
-// TODO learn javascript scoping, why is this necessary?
+// TODO javascript scoping: why is this necessary?
 function mkselector(menu, field, opt) {
   return function() {
     menu.select(field, opt);
@@ -204,16 +216,13 @@ function Player() {
   this.play = function(song) {
     this.song = song;
 
-    var v = 0.8;
     try {
       this.audio.pause();
-      v = this.audio.volume;
       this.audio.currentTime = 0.0;
     } catch(e) { /* ignore */ }
 
     this.audio = this.fetch_audio(song);
     this.audio.play();
-    this.audio.volume = v;
 
     var pd = elem('player-div');
     pd.innerHTML = '';
@@ -232,26 +241,6 @@ function Player() {
   this.filter_change = function(q) {
     this.db.apply_filter(q);
     this.menu.display(); 
-  }
-
-  this.get_vol = function() {
-    return this.audio.volume;
-  }
-
-  this.set_vol = function(v) {
-    v = (v > 1) ? 1 : v;
-    v = (v < 0.01) ? 0.01 : v;
-    this.audio.volume = v;
-  }
-
-  this.inc_vol = function() {
-    var v = this.get_vol();
-    this.set_vol(v * 1.15);
-  }
-
-  this.dec_vol = function() {
-    var v = this.get_vol();
-    this.set_vol(v * 0.85);
   }
 
   this.get_time = function() {
@@ -337,24 +326,16 @@ function kbd(player) {
         player.toggle();
         break;
       case 38: // up
-        player.inc_vol();
+        player.prev();
         break;
       case 40: // down
-        player.dec_vol();
+        player.next();
         break;
       case 37: // left
-        if(e.ctrlKey) {
-          player.dec_time();
-        } else {
-          player.prev();
-        }
+        player.dec_time();
         break;
       case 39: // right
-        if(e.ctrlKey) {
-          player.inc_time();
-        } else {
-          player.next();
-        }
+        player.inc_time();
         break;
     }
     // do not propagate
