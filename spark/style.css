@@ -5,53 +5,50 @@ html {
 
 body {
   font-family: sans-serif;
-  font-size: 11pt;
+  font-size: 12pt;
 }
 
 #wrap {
   width: 800px;
-  margin: 0 auto;
+  margin: 20px auto;
 }
 
 #playing {
-  font-size: 12pt;
-  margin: 20px 0 7px 0;
+  font-size: 14pt;
+  margin-bottom: 10px;
 }
 
 #player {
   width: 800px;
-  margin: 0 0 3px 0;
+  margin-bottom: 5px;
 }
 
 #filter {
-  width: 790px;
-  margin: 0;
+  width: 789px;
 }
 
 #genre-div {
   float: top;
-  margin: 12px 0 0 2px;
 }
 
 #artist-div, #album-div, #title-div {
   float: left;
-  margin: 12px 20px 0 2px;
 }
 
 ul {
-  margin: 0;
+  margin: 15px 0 1px 0;
   padding: 0;
   list-style-type: none;
   border-left: 1px solid black;
 }
 
 li {
-  margin: 0 0 10px 10px;
+  margin: 0 20px 10px 10px;
   padding: 0;
 }
 
 #genre-div li {
-  margin-right: 8px;
+  margin-right: 5px;
   display: inline;
 }
 
@@ -61,13 +58,12 @@ a:hover {
 }
 
 input {
-  font-size: 11pt;
+  font-size: 12pt;
   border: 1px solid black;
-  padding: 5px 0 5px 10px;
-  border-radius: 5px;
+  padding: 5px;
 }
 
 input:not(:focus) {
-  opacity: 0.4;
+  opacity: 0.7;
 }
 
