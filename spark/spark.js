@@ -198,11 +198,9 @@ function Menu() {
     var a = create('a');
     var s = function () { MENU.select(field, opt); };
     a.listen('click', s);
-    if(opt == proj(field)(this)) {
-      a.style.color = 'green';
-      a.style.fontStyle = 'italic';
-    }
     a.innerHTML = opt;
+    if(opt == proj(field)(this))
+      a.className = 'selected';
     return a;
   }
 

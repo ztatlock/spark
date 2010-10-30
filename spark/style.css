@@ -57,6 +57,11 @@ a:hover {
   cursor: default;
 }
 
+a.selected {
+  color: green;
+  font-style: italic;
+}
+
 input {
   font-size: 12pt;
   border: 1px solid black;
