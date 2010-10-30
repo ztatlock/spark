@@ -1,14 +1,66 @@
 FIELDS = ['genre', 'artist', 'album', 'title', 'track'];
 
-function main() {
-  d = new SongDB();
-  m = new Menu();
-  p = new Player();
+SONGDB = null;
+MENU   = null;
+PLAYER = null;
 
-  m.init(d, p);
-  p.init(d, m);
-  m.display();
-  register(p);
+function main() {
+  SONGDB = new SongDB();
+  MENU   = new Menu();
+  PLAYER = new Player();
+
+  MENU.display();
+
+  // register event handlers
+  var f = elem('filter');
+  f.listen('focus',  suspend_kbd);
+  f.listen('blur',   enable_kbd);
+  f.listen('change', filter_change);
+  enable_kbd();
+}
+
+function kbd(e) {
+  var matched = true;
+
+  switch(e.keyCode) {
+    case 32: // space
+      PLAYER.toggle();
+      break;
+    case 38: // up
+      PLAYER.prev();
+      break;
+    case 40: // down
+      PLAYER.next();
+      break;
+    case 37: // left
+      PLAYER.dec_time();
+      break;
+    case 39: // right
+      PLAYER.inc_time();
+      break;
+    default:
+      matched = false;
+      break;
+  }
+
+  // do not propagate events handled above
+  if(matched) {
+    kill_event(e);
+  }
+}
+
+function suspend_kbd() {
+  document.onkeydown = null;
+}
+
+function enable_kbd() {
+  document.onkeydown = kbd;
+}
+
+function filter_change() {
+  var q = elem('filter').value;
+  SONGDB.apply_filter(q);
+  MENU.display();
 }
 
 function proj(field) {
@@ -68,6 +120,14 @@ function SongDB() {
     this.restore();
     q = q.trim();
     if(q != '') {
+      // expand vars relating to current song
+      for(var i in FIELDS) {
+        var f = FIELDS[i];
+        var r = new RegExp('%' + f, 'g');
+        var c = '"' + proj(f)(PLAYER.song) + '"';
+        q = q.replace(r, c);
+      }
+
       // prepend fields with param 's'
       for(var i in FIELDS) {
         var f = FIELDS[i];
@@ -76,7 +136,7 @@ function SongDB() {
       }
 
       // prevent db mod, assign ==> compare
-      q = q.replace(/([^!=])=([^=])/g, '$1==$2'); 
+      q = q.replace(/([^!<>=])=([^=])/g, '$1==$2'); 
 
       var test = function(s) { return eval(q); };
       this.db = filter(test, this.db);
@@ -105,7 +165,7 @@ function song_cmp(s1, s2) {
   else if(s1.album  > s2.album)  return  1;
   else if(s1.track  < s2.track)  return -1;
   else if(s1.track  > s2.track)  return  1;
-  else                           return s1 - s2;
+  else /* arbitrary less than */ return -1;
 }
 
 function Menu() {
@@ -113,13 +173,6 @@ function Menu() {
   this.artist = '';
   this.album  = '';
   this.title  = '';
-  this.db     = null;
-  this.player = null;
-
-  this.init = function(db, player) {
-    this.db = db;
-    this.player = player;
-  }
 
   this.display = function() {
     this.display_field('genre');
@@ -143,7 +196,7 @@ function Menu() {
 
   this.selector = function(field, opt) {
     var a = create('a');
-    var s = mkselector(this, field, opt);
+    var s = function () { MENU.select(field, opt); };
     a.listen('click', s);
     if(opt == proj(field)(this)) {
       a.style.color = 'green';
@@ -154,7 +207,7 @@ function Menu() {
   }
 
   this.match_upto = function(field) {
-    return this.db.match_upto(field, this);
+    return SONGDB.match_upto(field, this);
   }
 
   this.song = function() {
@@ -186,17 +239,10 @@ function Menu() {
         break;
       case 'title':
         this.title  = opt;
-        this.player.play(this.song());
+        PLAYER.play(this.song());
         break;
     }
     this.display();
-  }
-}
-
-// TODO javascript scoping: why is this necessary?
-function mkselector(menu, field, opt) {
-  return function() {
-    menu.select(field, opt);
   }
 }
 
@@ -205,22 +251,12 @@ function Player() {
   this.ncache = 4;
   this.song   = null;
   this.audio  = null;
-  this.db     = null;
-  this.menu   = null;
-
-  this.init = function(db, menu) {
-    this.db = db;
-    this.menu = menu;
-  }
 
   this.play = function(song) {
-    this.song = song;
-
-    try {
+    if(this.audio != null)
       this.audio.pause();
-      this.audio.currentTime = 0.0;
-    } catch(e) { /* ignore */ }
 
+    this.song = song;
     this.audio = this.fetch_audio(song);
     this.audio.play();
 
@@ -234,13 +270,8 @@ function Player() {
       song.album  + ' &nbsp; - &nbsp; ' +
       song.title;
     document.title = song.title;
-    this.menu.title = song.title;
-    this.menu.display();
-  }
-
-  this.filter_change = function(q) {
-    this.db.apply_filter(q);
-    this.menu.display(); 
+    MENU.title = song.title;
+    MENU.display();
   }
 
   this.get_time = function() {
@@ -248,8 +279,8 @@ function Player() {
   }
 
   this.set_time = function(t) {
-    t = (t < p.startTime) ? p.startTime : t;
-    t = (t > p.endTime) ? p.endTime : t;
+    t = (t < this.audio.startTime) ? this.audio.startTime : t;
+    t = (t > this.audio.endTime)   ? this.audio.endTime   : t;
     this.audio.currentTime = t;
   }
 
@@ -271,18 +302,18 @@ function Player() {
   }
 
   this.prev = function() {
-    var s = this.db.prev(this.song);
+    var s = SONGDB.prev(this.song);
     this.play(s);
   }
 
   this.next = function() {
-    var s = this.db.next(this.song);
+    var s = SONGDB.next(this.song);
     this.play(s);
   }
 
   this.fetch_audio = function(song) {
     this.pull_in(song);
-    this.pull_in(this.db.next(song)); // prefetch
+    this.pull_in(SONGDB.next(song)); // prefetch
     return this.lkup_audio(song);
   }
 
@@ -307,73 +338,14 @@ function Player() {
 
   this.mk_audio = function(song) {
     var a = new Audio();
-    a.song = song;
     a.id = 'player';
     a.preload = 'auto';
     a.autobuffer = true;
     a.controls = true;
     a.src = escape(song.path);
-    var p = this;
-    a.listen('ended', function() { p.next(); });
+    a.listen('ended', function() { PLAYER.next(); });
     return a;
   }
-}
-
-function kbd(player) {
-  return function(e) {
-    switch(e.keyCode) {
-      case 32: // space
-        player.toggle();
-        break;
-      case 38: // up
-        player.prev();
-        break;
-      case 40: // down
-        player.next();
-        break;
-      case 37: // left
-        player.dec_time();
-        break;
-      case 39: // right
-        player.inc_time();
-        break;
-    }
-    // do not propagate
-    switch(e.keyCode) {
-      case 32: // space
-      case 38: // up
-      case 40: // down
-      case 37: // left
-      case 39: // right
-        kill_event(e);
-    }
-  }
-}
-
-function suspend_kbd() {
-  document.onkeydown = null;
-}
-
-function enable_kbd(player) {
-  return function() {
-    document.onkeydown = kbd(player);
-  }
-}
-
-function filter_change(player) {
-  return function() {
-    var f = elem('filter');
-    player.filter_change(f.value);
-  }
-}
-
-function register(player) {
-  var f = elem('filter');
-  f.listen('focus',  suspend_kbd);
-  f.listen('blur',   enable_kbd(player));
-  f.listen('change', filter_change(player));
-
-  enable_kbd(player)();
 }
 
 /* ------------------------- PROGRAMMING SUPPORT ----------------------- */
@@ -392,6 +364,11 @@ HTMLElement.prototype.listen = function(e, f) {
 
 String.prototype.trim = function() {
   return String(this).replace(/^\s+|\s+$/g, '');
+}
+
+/* for user filters */
+String.prototype.has = function(s) {
+  return this.indexOf(s) != -1;
 }
 
 function fetch(url) {
