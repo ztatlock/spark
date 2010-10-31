@@ -263,10 +263,13 @@ function Player() {
     pd.appendChild(this.audio);
 
     // update display
-    elem('playing').innerHTML = 
-      song.artist + ' &nbsp; - &nbsp; ' +
-      song.album  + ' &nbsp; - &nbsp; ' +
-      song.title;
+    var p = song.artist + ' &nbsp; - &nbsp; ' +
+            song.album  + ' &nbsp; - &nbsp; ' +
+            song.title;
+    // try to prevent wrapping
+    if(p.length > 110)
+      p = song.artist + ' &nbsp; - &nbsp; ' + song.title;
+    elem('playing').innerHTML = p;
     document.title = song.title;
     MENU.title = song.title;
     MENU.display();
